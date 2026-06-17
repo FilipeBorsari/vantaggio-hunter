@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(go version *)",
+      "Bash(docker --version)",
+      "Bash(docker compose *)",
+      "Bash(which go *)",
+      "Read(//usr/local/go/**)",
+      "Read(//usr/local/**)",
+      "Read(//home/filipeborsari/**)",
+      "Read(//home/filipeborsari/go/**)"
+    ]
+  }
+}

@@ -1,0 +1,7 @@
+.env
+*.env.local
+api/bin/
+web/.next/
+web/node_modules/
+*.csv
+postgres_data/
