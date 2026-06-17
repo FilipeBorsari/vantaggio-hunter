@@ -1,176 +1,173 @@
----
-name: skill-creator
-description: Guia para criar AI agent skills eficazes. Use quando usuários quiserem criar uma nova skill (ou atualizar uma skill existente) que estenda as capacidades de um AI agent com conhecimento especializado, workflows ou integrações com ferramentas. Funciona com qualquer agent que suporte o formato SKILL.md (Claude Code, Cursor, Roo, Cline, Windsurf, etc.). Dispara em "create skill", "new skill", "package knowledge", "skill for".
----
+# Skill: Skill Creator
 
-# Skill Creator
+> Guia para criação de skills eficazes para agentes de IA.
 
-Esta skill fornece orientações para criar skills eficazes e agnósticas de agent.
+## Objetivo
 
-## Sobre Skills
+Orientar a criação de novas skills para agentes de IA neste repositório, garantindo que sejam claras, acionáveis e eficazes para os casos de uso pretendidos.
 
-Skills são pacotes modulares e autocontidos que estendem as capacidades de AI agents ao fornecer conhecimento especializado, workflows e ferramentas. Pense nelas como “guias de onboarding” para domínios ou tarefas específicas — elas transformam um agent de uso geral em um agent especializado, equipado com conhecimento procedural.
+## O que é uma Skill?
 
-### O que Skills oferecem
+Uma **skill** é um documento instrucional que ensina um agente de IA a executar um conjunto específico de tarefas dentro de um contexto bem definido. Uma boa skill:
 
-1. **Workflows especializados** – Procedimentos multi-step para domínios específicos
-2. **Tool integrations** – Instruções para trabalhar com formatos de arquivo ou APIs específicas
-3. **Domain expertise** – Conhecimento específico da empresa, schemas, lógica de negócio
-4. **Bundled resources** – Scripts, referências e assets para tarefas complexas e repetitivas
+- Tem **escopo claro e delimitado**
+- Fornece **instruções passo a passo** acionáveis
+- Inclui **exemplos concretos** e templates
+- Define **quando usar** e **quando não usar**
+- É **independente** — pode ser lida e executada sem contexto adicional
 
-## Princípios Fundamentais
+## Estrutura de uma Skill
 
-### Concisão é essencial
+Toda skill deve seguir esta estrutura:
 
-A context window é um bem público. Skills compartilham contexto com tudo o mais que o agent precisa.
+```markdown
+# Skill: <Nome da Skill>
 
-**Premissa padrão: o agent já é muito inteligente.** Adicione apenas o contexto que ele ainda não possui. Questione cada informação:  
-“Esse agent realmente precisa disso?” e “Esse parágrafo justifica o custo em tokens?”
+> <Tagline de uma linha descrevendo o propósito>
 
-Prefira exemplos concisos em vez de explicações verbosas.
+## Objetivo
+<O que esta skill faz e por que é útil>
 
-### Anatomia de uma Skill
+## Quando Usar
+<Lista de cenários onde esta skill é aplicável>
 
-Toda skill consiste em um arquivo SKILL.md obrigatório e recursos opcionais:
+## [Seções específicas da skill]
+<Instruções, processos, templates, exemplos>
 
-```
-skill-name/
-├── SKILL.md (required)
-│   ├── YAML frontmatter metadata (required)
-│   │   ├── name: (required)
-│   │   └── description: (required)
-│   └── Markdown instructions (required)
-└── Bundled Resources (optional)
-    ├── scripts/          - Executable code (Python/Bash/etc.)
-    ├── references/       - Documentation loaded into context as needed
-    └── assets/           - Files used in output (templates, icons, fonts, etc.)
+## Boas Práticas
+<Dicas e armadilhas comuns>
+
+## Referências (opcional)
+<Links e recursos relevantes>
 ```
 
-#### SKILL.md (required)
+## Localização das Skills
 
-Todo SKILL.md consiste em:
-
-- **Frontmatter** (YAML): Contém os campos `name` e `description`. Esses são os únicos campos lidos para determinar quando a skill será utilizada — seja claro e abrangente.
-- **Body** (Markdown): Instruções e orientações para uso da skill. Só é carregado **APÓS** a skill ser acionada.
-
-#### Bundled Resources (optional)
-
-##### Scripts (`scripts/`)
-
-Código executável para tarefas que exigem confiabilidade determinística ou que são reescritas repetidamente.
-
-- **Quando incluir**: Quando o mesmo código está sendo reescrito várias vezes
-- **Exemplo**: `scripts/rotate_pdf.py` para tarefas de rotação de PDF
-- **Benefícios**: Eficiência de tokens, comportamento determinístico
-
-##### References (`references/`)
-
-Documentação e material de referência carregados no contexto conforme necessário.
-
-- **Quando incluir**: Para documentação que o agent deve consultar durante o trabalho
-- **Exemplos**: `references/schema.md` para schemas de banco de dados, `references/api_docs.md` para especificações de API
-- **Benefícios**: Mantém o SKILL.md enxuto, carregado apenas quando necessário
-
-##### Assets (`assets/`)
-
-Arquivos que não devem ser carregados no contexto, mas utilizados no output final.
-
-- **Quando incluir**: Quando a skill precisa de arquivos para o resultado final
-- **Exemplos**: `assets/logo.png` para brand assets, `assets/template.html` para boilerplate HTML
-
-### Progressive Disclosure
-
-Skills utilizam um sistema de carregamento em três níveis:
-
-1. **Metadata (name + description)** – Sempre no contexto (~100 palavras)
-2. **SKILL.md body** – Quando a skill é acionada (< 5k palavras)
-3. **Bundled resources** – Conforme necessário (ilimitado)
-
-Mantenha o body do SKILL.md abaixo de 500 linhas. Divida o conteúdo em arquivos separados ao se aproximar desse limite.
-
-## Processo de Criação de Skill
-
-### Passo 1: Entender a Skill
-
-Esclareça com exemplos concretos:
-
-- “Que funcionalidade esta skill deve suportar?”
-- “Você pode dar exemplos de como essa skill seria usada?”
-- “O que deve disparar essa skill?”
-
-### Passo 2: Planejar Conteúdos Reutilizáveis
-
-Analise cada exemplo:
-
-1. Considere como executar do zero
-2. Identifique scripts, references e assets úteis
-
-### Passo 3: Criar a Skill
-
-Crie o diretório da skill:
+As skills ficam em `.github/skills/<nome-da-skill>/SKILL.md`.
 
 ```
-skill-name/
-├── SKILL.md
-├── scripts/     (se necessário)
-├── references/  (se necessário)
-└── assets/      (se necessário)
+.github/
+└── skills/
+    ├── domain-analysis/
+    │   └── SKILL.md
+    ├── skill-creator/
+    │   └── SKILL.md
+    └── <nova-skill>/
+        └── SKILL.md
 ```
 
-### Passo 4: Escrever o SKILL.md
+## Processo de Criação
 
-#### Frontmatter
+### Passo 1: Defina o Problema
 
-```yaml
----
-name: skill-name
-description: O que a skill faz e quando utilizá-la. Inclua triggers e contextos específicos. Máx. 1024 caracteres.
----
+Responda antes de escrever:
+
+1. **Qual problema esta skill resolve?**
+2. **Quem vai usar esta skill?** (agente de IA, desenvolvedor, etc.)
+3. **Qual é o resultado esperado após executar a skill?**
+4. **Esta skill sobrepõe com alguma skill existente?**
+
+Se houver sobreposição com skill existente, considere expandir a skill existente ao invés de criar uma nova.
+
+### Passo 2: Defina o Escopo
+
+Uma skill deve ter **escopo único e coeso**. Exemplos:
+
+| ✅ Bom Escopo | ❌ Escopo Ruim |
+|--------------|---------------|
+| Análise de domínio DDD | "Fazer tudo relacionado a DDD" |
+| Criação de migration TypeORM | "Gerenciar banco de dados" |
+| Revisão de Pull Request | "Desenvolvimento completo de feature" |
+
+### Passo 3: Escreva as Instruções
+
+**Princípios para instruções eficazes:**
+
+1. **Seja específico**: "Execute `npm run migration:generate -- --name=CreateBillingTable`" em vez de "Gere uma migration"
+2. **Use listas numeradas** para sequências obrigatórias
+3. **Use listas com marcadores** para opções ou itens sem ordem
+4. **Inclua exemplos de código** sempre que possível
+5. **Antecipe erros comuns** e como resolvê-los
+6. **Defina critérios de sucesso** — como saber que a tarefa foi concluída corretamente
+
+### Passo 4: Crie Templates
+
+Inclua templates prontos que o agente pode usar diretamente:
+
+```markdown
+## Template: <Nome>
+
+\`\`\`typescript
+// Código template aqui
+\`\`\`
 ```
 
-**Diretrizes para description:**
+### Passo 5: Valide a Skill
 
-- Inclua tanto o que a skill faz quanto quando usá-la
-- Inclua trigger phrases
-- Máx. 1024 caracteres, sem XML tags
-- Escreva em terceira pessoa
+Antes de finalizar, verifique:
 
-#### Body
+- [ ] O objetivo está claro em uma leitura rápida
+- [ ] As instruções são suficientemente detalhadas para execução autônoma
+- [ ] Os exemplos cobrem os casos de uso mais comuns
+- [ ] A skill não tem dependências implícitas não documentadas
+- [ ] O formato é consistente com as outras skills do repositório
 
-Escreva instruções para uso da skill. Inclua:
+## Boas Práticas
 
-- Quick start guide
-- Workflow passo a passo
-- Links para arquivos de reference quando necessário
+### O que fazer ✅
 
-### Passo 5: Testar e Iterar
+- **Escreva em português brasileiro** — padrão do time
+- **Use exemplos do próprio repositório** para ilustrar conceitos
+- **Seja imperativo** — "Crie", "Execute", "Verifique" em vez de "Você pode criar"
+- **Referencie arquivos específicos** quando relevante (ex: `src/modules/billing/`)
+- **Mantenha as skills atualizadas** quando o projeto evolui
 
-1. Use a skill em tarefas reais
-2. Observe dificuldades ou ineficiências
-3. Atualize o SKILL.md ou os recursos
-4. Teste novamente
+### O que evitar ❌
 
-## Checklist de Qualidade
+- **Não seja vago** — "faça o correto" não instrui ninguém
+- **Não duplique conteúdo** do AGENTS.md — referencie ao invés de copiar
+- **Não crie skills muito longas** — se estiver grande demais, divida em skills menores
+- **Não presuma conhecimento implícito** — seja explícito sobre contexto e requisitos
 
-Antes de finalizar:
+## Exemplo de Skill Bem Estruturada
 
-- [ ] Description é específica sobre quando usar (máx. 1024 chars)
-- [ ] Nome da pasta em kebab-case
-- [ ] Instruções acionáveis e não ambíguas
-- [ ] Escopo focado (uma responsabilidade)
-- [ ] Body do SKILL.md < 500 linhas
-- [ ] References estão a um nível do SKILL.md
+```markdown
+# Skill: Criar Migration TypeORM
 
-## Output Messages
+> Guia para criação de migrations de banco de dados no padrão do projeto.
 
-Ao criar uma skill, informe o usuário:
+## Objetivo
+Criar migrations TypeORM seguindo as convenções do projeto para alterações
+seguras e rastreáveis no esquema do banco de dados.
 
+## Quando Usar
+- Adicionar nova tabela ao banco de dados
+- Adicionar ou remover colunas de tabela existente
+- Criar índices ou constraints
+
+## Processo
+
+### 1. Gere a migration
+\`\`\`bash
+NAME=CreateBillingTable npm run migration:generate
+\`\`\`
+
+### 2. Revise o arquivo gerado
+Verifique em `src/shared/database/migrations/` se o SQL gerado está correto.
+
+### 3. Execute localmente
+\`\`\`bash
+npm run migration:run
+\`\`\`
+
+## Boas Práticas
+- Nomeie migrations descritivamente: `AddDueDateToBilling`, `CreatePaymentMethodTable`
+- Nunca altere uma migration já executada em produção
+- Sempre implemente o método `down()` para rollback
 ```
-✅ Skill criada com sucesso!
 
-📁 Location: .github/skills/[name]/SKILL.md
-🎯 Purpose: [descrição breve]
-🔧 How to test: [prompt de exemplo que deve disparar a skill]
+## Referências
 
-💡 Tip: O agent usará esta skill automaticamente quando detectar [context].
-```
+- [agents.md](https://agents.md/) — Formato e boas práticas para AGENTS.md
+- [`AGENTS.md`](../../AGENTS.md) — Instruções gerais para agentes neste repositório
+- [`docs/archtecture-guideline.md`](../../docs/archtecture-guideline.md) — Diretrizes de arquitetura
