@@ -4,6 +4,10 @@ api/bin/
 web/.next/
 web/node_modules/
 *.csv
+DADOS/
+ingestion.log
+embeddings.log
+.ingestion_progress
 postgres_data/
 STEP-00-infraestrutura.md
 
