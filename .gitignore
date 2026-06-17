@@ -5,3 +5,13 @@ web/.next/
 web/node_modules/
 *.csv
 postgres_data/
+STEP-00-infraestrutura.md
+
+STEP-01-ingestao-receita.md
+STEP-02-auth-saas-api.md
+STEP-03-busca-frontend.md
+STEP-04-creditos.md
+STEP-05-dashboard.md
+STEP-06-crm-export.md
+STEP-07-inteligencia.md
+STEP-08-reseller.md
