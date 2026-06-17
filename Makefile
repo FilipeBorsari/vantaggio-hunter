@@ -19,7 +19,7 @@ migrate-down:
 	cd api && env $(grep -v '^#' ../.env | grep '=' | xargs) go run ./cmd/migrate down
 
 test:
-	cd api && /home/filipeborsari/go/bin/go test ./...
+	cd api && /home/filipeborsari/go/bin/gotestsum --format testdox
 
 lint:
 	cd api && /home/filipeborsari/go/bin/go vet ./...
