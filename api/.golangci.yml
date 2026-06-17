@@ -1,0 +1,24 @@
+# golangci-lint ainda não suporta Go 1.25 (v1.64.8 foi compilado com Go 1.23).
+# Este arquivo entrará em uso assim que uma release compatível for publicada.
+# Enquanto isso, use `go vet ./...` para análise local.
+
+version: "2"
+
+linters:
+  enable:
+    - errcheck
+    - govet
+    - staticcheck
+    - ineffassign
+    - unused
+
+linters-settings:
+  errcheck:
+    check-type-assertions: true
+    check-blank: true
+
+issues:
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - errcheck

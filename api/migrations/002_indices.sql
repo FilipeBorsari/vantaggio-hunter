@@ -15,13 +15,8 @@ CREATE INDEX IF NOT EXISTS idx_company_cnaes_cnpj ON tb_company_cnaes (cnpj);
 -- Índice em tb_partners para lookup por empresa
 CREATE INDEX IF NOT EXISTS idx_partners_cnpj_basico ON tb_partners (cnpj_basico);
 
--- Nota: o índice HNSW em tb_companies.embedding deve ser criado DEPOIS da ingestão completa
--- e da geração de embeddings. O CLI de ingestão faz isso automaticamente ao final.
--- Para criar manualmente:
---
--- CREATE INDEX idx_companies_embedding ON tb_companies
---     USING hnsw (embedding vector_cosine_ops)
---     WITH (m = 16, ef_construction = 64);
+-- O índice HNSW em tb_companies.embedding está na migration 004_hnsw_index.sql,
+-- que deve ser rodada após a ingestão completa e a geração de embeddings.
 
 -- +goose Down
 
