@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
 	"log"
 	"log/slog"
 	"net/http"
@@ -15,6 +16,7 @@ import (
 	authpkg "github.com/vantaggio/prospect-api/internal/auth"
 	"github.com/vantaggio/prospect-api/internal/companies"
 	"github.com/vantaggio/prospect-api/internal/credits"
+	"github.com/vantaggio/prospect-api/internal/exports"
 	"github.com/vantaggio/prospect-api/internal/searches"
 	"github.com/vantaggio/prospect-api/pkg/db"
 	"github.com/vantaggio/prospect-api/pkg/httputil"
@@ -64,6 +66,11 @@ func main() {
 	analyticsSvc := analytics.NewService(analyticsRepo)
 	analyticsHandler := analytics.NewHandler(analyticsSvc)
 
+	encKey := loadEncryptionKey()
+	exportsRepo := exports.NewPostgresRepository(pool)
+	exportsSvc := exports.NewService(exportsRepo, creditsSvc, encKey)
+	exportsHandler := exports.NewHandler(exportsSvc, redisClient)
+
 	// Start ETL job
 	go analytics.StartETLJob(ctx, analyticsSvc)
 
@@ -74,6 +81,11 @@ func main() {
 		go worker.Run(ctx)
 	}
 	slog.Info("search workers started", "count", workerCount)
+
+	// Start export worker
+	exportWorker := exports.NewWorker(exportsRepo, redisClient, creditsSvc, companiesRepo, encKey)
+	go exportWorker.Run(ctx)
+	slog.Info("export worker started")
 
 	r := chi.NewRouter()
 	r.Use(chiMiddleware.Logger)
@@ -109,6 +121,12 @@ func main() {
 		r.Get("/analytics/top-cnaes", analyticsHandler.GetTopCNAEs)
 		r.Get("/analytics/funnel", analyticsHandler.GetFunnel)
 
+		r.Get("/crm/integrations", exportsHandler.GetIntegration)
+		r.Post("/crm/integrations", exportsHandler.CreateIntegration)
+		r.Post("/exports", exportsHandler.CreateExport)
+		r.Get("/exports", exportsHandler.ListExports)
+		r.Get("/exports/{id}", exportsHandler.GetExport)
+
 		r.Group(func(r chi.Router) {
 			r.Use(authpkg.RequireRole("admin"))
 			r.Get("/admin/plans", adminHandler.ListPlans)
@@ -138,3 +156,20 @@ func workerConcurrency() int {
 	}
 	return n
 }
+
+// loadEncryptionKey decodes ENCRYPTION_KEY (base64, must be 32 bytes after decoding).
+func loadEncryptionKey() []byte {
+	raw := os.Getenv("ENCRYPTION_KEY")
+	if raw == "" {
+		log.Fatal("ENCRYPTION_KEY env var is required")
+	}
+	key, err := base64.StdEncoding.DecodeString(raw)
+	if err != nil {
+		log.Fatalf("decode ENCRYPTION_KEY: %v", err)
+	}
+	if len(key) != 32 {
+		log.Fatalf("ENCRYPTION_KEY must decode to exactly 32 bytes, got %d", len(key))
+	}
+	return key
+}
+
