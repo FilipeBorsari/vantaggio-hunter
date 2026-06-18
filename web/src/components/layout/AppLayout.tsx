@@ -10,7 +10,9 @@ import {
   LogOut,
   Menu,
   Search,
+  Settings,
   ShieldCheck,
+  Upload,
   X,
 } from "lucide-react";
 import CreditBalance from "@/components/credits/CreditBalance";
@@ -51,6 +53,18 @@ const navItems = [
     href: "/credits",
     label: "Créditos",
     icon: CreditCard,
+    roles: ["admin", "manager"] as string[],
+  },
+  {
+    href: "/exports",
+    label: "Exportações",
+    icon: Upload,
+    roles: ["admin", "manager", "operator"] as string[],
+  },
+  {
+    href: "/settings/crm",
+    label: "Config. CRM",
+    icon: Settings,
     roles: ["admin", "manager"] as string[],
   },
   {
