@@ -49,6 +49,7 @@ type SearchResult struct {
 
 type SearchResponse struct {
 	ID          string         `json:"id"`
+	Mode        SearchMode     `json:"mode"`
 	Status      SearchStatus   `json:"status"`
 	ResultCount *int           `json:"result_count,omitempty"`
 	Results     []SearchResult `json:"results,omitempty"`

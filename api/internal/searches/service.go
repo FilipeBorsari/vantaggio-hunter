@@ -61,6 +61,7 @@ func (s *Service) Get(ctx context.Context, id, orgID string, page, limit int) (*
 
 	resp := &domain.SearchResponse{
 		ID:          search.ID,
+		Mode:        search.Mode,
 		Status:      search.Status,
 		ResultCount: search.ResultCount,
 	}
