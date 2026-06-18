@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { ArrowLeft, RefreshCw, Upload, X } from "lucide-react";
+import { ArrowLeft, RefreshCw, Sparkles, Upload, X } from "lucide-react";
 
 interface SearchResult {
   cnpj: string;
@@ -13,6 +13,8 @@ interface SearchResult {
   capital_social?: number;
   situacao: number;
   score?: number;
+  ai_score?: number;
+  ai_score_age_days?: number;
 }
 
 interface SearchResponse {
@@ -40,10 +42,10 @@ function formatCurrency(v?: number) {
 }
 
 function SkeletonRow({ isSemantic }: { isSemantic: boolean }) {
-  const cols = isSemantic ? [200, 300, 120, 80, 60, 50] : [200, 300, 120, 80, 60];
+  const cols = isSemantic ? [200, 300, 120, 80, 60, 50, 80] : [200, 300, 120, 80, 60, 80];
   const grid = isSemantic
-    ? "grid-cols-[28px_200px_1fr_160px_120px_80px_64px]"
-    : "grid-cols-[28px_200px_1fr_160px_120px_80px]";
+    ? "grid-cols-[28px_200px_1fr_160px_120px_80px_64px_96px]"
+    : "grid-cols-[28px_200px_1fr_160px_120px_80px_96px]";
   return (
     <div className={`grid ${grid} gap-2 items-center px-4 h-12 border-b border-gray-50 animate-pulse`}>
       <div className="h-4 w-4 bg-gray-200 rounded" />
@@ -136,6 +138,18 @@ function ExportModal({ count, searchId, selectedCNPJs, onClose, onSuccess }: Exp
   );
 }
 
+function AIScoreBadge({ score }: { score: number }) {
+  const color =
+    score > 70 ? "bg-green-50 text-green-700 border-green-200"
+    : score >= 40 ? "bg-yellow-50 text-yellow-700 border-yellow-200"
+    : "bg-red-50 text-red-700 border-red-200";
+  return (
+    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold border ${color}`}>
+      {score}
+    </span>
+  );
+}
+
 export default function SearchResultsPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
@@ -149,11 +163,61 @@ export default function SearchResultsPage() {
   const [showModal, setShowModal] = useState(false);
   const [exportToast, setExportToast] = useState(false);
 
+  // AI qualification state
+  const [qualifying, setQualifying] = useState<Set<string>>(new Set());
+  const [aiScores, setAiScores] = useState<Map<string, { score: number; age_days: number }>>(new Map());
+  const [showQualifyModal, setShowQualifyModal] = useState(false);
+  const [qualifyBatch, setQualifyBatch] = useState<string[]>([]);
+  const [qualifyBatchLoading, setQualifyBatchLoading] = useState(false);
+
+  async function handleQualify(cnpj: string) {
+    setQualifying((prev) => new Set(prev).add(cnpj));
+    try {
+      const res = await fetch(`/api/ia/qualify/${cnpj}`, { method: "POST" });
+      if (res.ok) {
+        const json = await res.json();
+        setAiScores((prev) => new Map(prev).set(cnpj, { score: json.score, age_days: 0 }));
+      }
+    } finally {
+      setQualifying((prev) => { const next = new Set(prev); next.delete(cnpj); return next; });
+    }
+  }
+
+  async function handleQualifyBatch() {
+    setQualifyBatchLoading(true);
+    try {
+      await Promise.allSettled(
+        qualifyBatch.map(async (cnpj) => {
+          const res = await fetch(`/api/ia/qualify/${cnpj}`, { method: "POST" });
+          if (res.ok) {
+            const json = await res.json();
+            setAiScores((prev) => new Map(prev).set(cnpj, { score: json.score, age_days: 0 }));
+          }
+        })
+      );
+    } finally {
+      setQualifyBatchLoading(false);
+      setShowQualifyModal(false);
+      setQualifyBatch([]);
+    }
+  }
+
   const fetchResults = useCallback(async (p: number) => {
     const res = await fetch(`/api/searches/${id}?page=${p}&limit=${limit}`);
     if (!res.ok) return;
     const json: SearchResponse = await res.json();
     setData(json);
+    if (json.results) {
+      setAiScores((prev) => {
+        const next = new Map(prev);
+        for (const r of json.results!) {
+          if (r.ai_score != null) {
+            next.set(r.cnpj, { score: r.ai_score, age_days: r.ai_score_age_days ?? 0 });
+          }
+        }
+        return next;
+      });
+    }
     return json;
   }, [id]);
 
@@ -177,8 +241,8 @@ export default function SearchResultsPage() {
   const results = data?.results ?? [];
   const isSemantic = data?.mode === "semantic";
   const gridCols = isSemantic
-    ? "grid-cols-[28px_200px_1fr_160px_120px_80px_64px]"
-    : "grid-cols-[28px_200px_1fr_160px_120px_80px]";
+    ? "grid-cols-[28px_200px_1fr_160px_120px_80px_64px_96px]"
+    : "grid-cols-[28px_200px_1fr_160px_120px_80px_96px]";
   const parentRef = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line react-hooks/incompatible-library -- useVirtualizer não é memoizável por design do TanStack
   const rowVirtualizer = useVirtualizer({
@@ -252,7 +316,7 @@ export default function SearchResultsPage() {
         </div>
       )}
 
-      {/* Export action bar */}
+      {/* Export/qualify action bar */}
       {selected.size > 0 && (
         <div className="flex items-center justify-between bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-2.5">
           <span className="text-sm text-indigo-700 font-medium">
@@ -264,6 +328,17 @@ export default function SearchResultsPage() {
               className="text-xs text-indigo-500 hover:text-indigo-700"
             >
               Limpar seleção
+            </button>
+            <button
+              onClick={() => {
+                const unqualified = Array.from(selected).filter((c) => !aiScores.has(c));
+                setQualifyBatch(unqualified);
+                setShowQualifyModal(true);
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 text-white text-xs font-medium rounded-lg hover:bg-purple-700"
+            >
+              <Sparkles size={12} />
+              Qualificar ({Array.from(selected).filter((c) => !aiScores.has(c)).length * 10} créditos)
             </button>
             <button
               onClick={() => setShowModal(true)}
@@ -299,6 +374,7 @@ export default function SearchResultsPage() {
           <span>Capital</span>
           <span>Situação</span>
           {isSemantic && <span>Score</span>}
+          <span className="flex items-center gap-1"><Sparkles size={11} className="text-purple-500" />Score IA</span>
         </div>
 
         {/* Body */}
@@ -348,6 +424,23 @@ export default function SearchResultsPage() {
                         {r.score != null ? Math.round(r.score * 100) : "—"}
                       </span>
                     )}
+                    <span>
+                      {(() => {
+                        const q = aiScores.get(r.cnpj);
+                        if (q) return <AIScoreBadge score={q.score} />;
+                        const isQualifying = qualifying.has(r.cnpj);
+                        return (
+                          <button
+                            onClick={() => handleQualify(r.cnpj)}
+                            disabled={isQualifying}
+                            className="inline-flex items-center gap-1 px-2 py-0.5 text-xs text-purple-600 border border-purple-200 rounded-full hover:bg-purple-50 disabled:opacity-50 disabled:cursor-wait"
+                          >
+                            <Sparkles size={10} />
+                            {isQualifying ? "..." : "10cr"}
+                          </button>
+                        );
+                      })()}
+                    </span>
                   </div>
                 );
               })}
@@ -400,6 +493,43 @@ export default function SearchResultsPage() {
           onClose={() => setShowModal(false)}
           onSuccess={handleExportSuccess}
         />
+      )}
+
+      {showQualifyModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setShowQualifyModal(false)} />
+          <div className="relative bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm mx-4 flex flex-col gap-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-base font-semibold text-gray-900">Qualificar Empresas</h2>
+              <button onClick={() => setShowQualifyModal(false)} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
+            </div>
+            <div className="bg-gray-50 rounded-xl px-4 py-3 text-sm text-gray-700 space-y-1">
+              <div className="flex justify-between">
+                <span>Empresas a qualificar</span>
+                <span className="font-medium">{qualifyBatch.length}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Custo total</span>
+                <span className="font-medium text-purple-700">{qualifyBatch.length * 10} créditos</span>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowQualifyModal(false)}
+                className="flex-1 px-4 py-2 border border-gray-300 text-sm rounded-lg hover:bg-gray-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleQualifyBatch}
+                disabled={qualifyBatchLoading || qualifyBatch.length === 0}
+                className="flex-1 px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 disabled:opacity-50"
+              >
+                {qualifyBatchLoading ? "Qualificando..." : "Confirmar"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

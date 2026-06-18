@@ -45,6 +45,8 @@ type SearchResult struct {
 	SituacaoCadastral int      `json:"situacao"`
 	Score             *float64 `json:"score,omitempty"`
 	CNAEs             []CNAE   `json:"cnaes"`
+	AIScore           *int16   `json:"ai_score,omitempty"`
+	AIScoreAgeDays    *int     `json:"ai_score_age_days,omitempty"`
 }
 
 type SearchResponse struct {

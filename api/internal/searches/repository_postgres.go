@@ -310,9 +310,18 @@ func (r *postgresRepo) GetResults(ctx context.Context, searchID string, page, li
 	offset := (page - 1) * limit
 	rows, err := r.db.Query(ctx, `
 		SELECT sr.cnpj, sr.score,
-		       c.razao_social, c.municipio_nome, c.uf, c.capital_social, c.situacao_cadastral
+		       c.razao_social, c.municipio_nome, c.uf, c.capital_social, c.situacao_cadastral,
+		       aq.score AS ai_score,
+		       EXTRACT(DAY FROM now() - aq.created_at)::int AS ai_score_age_days
 		FROM tb_search_results sr
 		JOIN tb_companies c ON c.cnpj=sr.cnpj
+		LEFT JOIN LATERAL (
+		    SELECT score, created_at
+		    FROM tb_ai_qualifications
+		    WHERE cnpj=sr.cnpj AND org_id=(SELECT org_id FROM tb_searches WHERE id=$1)
+		    ORDER BY created_at DESC
+		    LIMIT 1
+		) aq ON true
 		WHERE sr.search_id=$1
 		ORDER BY sr.position
 		LIMIT $2 OFFSET $3`,
@@ -330,6 +339,7 @@ func (r *postgresRepo) GetResults(ctx context.Context, searchID string, page, li
 		if err := rows.Scan(
 			&res.CNPJ, &res.Score,
 			&res.RazaoSocial, &res.Municipio, &res.UF, &res.CapitalSocial, &res.SituacaoCadastral,
+			&res.AIScore, &res.AIScoreAgeDays,
 		); err != nil {
 			return nil, 0, fmt.Errorf("scan result: %w", err)
 		}

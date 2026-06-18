@@ -8,7 +8,8 @@ const (
 	CreditTxCompanyDetail CreditTxType = "company_detail"
 	CreditTxEnrichment    CreditTxType = "enrichment"
 	CreditTxExport        CreditTxType = "export"
-	CreditTxAdjustment    CreditTxType = "adjustment"
+	CreditTxAdjustment      CreditTxType = "adjustment"
+	CreditTxAIQualification CreditTxType = "ai_qualification"
 )
 
 type CreditTransaction struct {

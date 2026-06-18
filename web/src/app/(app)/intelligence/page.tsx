@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Brain, Search, MessageSquare, Sparkles, Copy, Check } from "lucide-react";
+import { Brain, Search, MessageSquare, Sparkles, Copy, Check, Star } from "lucide-react";
 
 interface CNAE {
   code: string;
@@ -303,8 +303,162 @@ function TemplateGenerator() {
   );
 }
 
+interface QualificationResult {
+  qualification_id: string;
+  cnpj: string;
+  score: number;
+  justification: string;
+  model: string;
+  credits_used: number;
+  from_cache?: boolean;
+}
+
+function ScoreBadge({ score }: { score: number }) {
+  const color =
+    score > 70 ? "bg-green-50 text-green-700 border-green-200"
+    : score >= 40 ? "bg-yellow-50 text-yellow-700 border-yellow-200"
+    : "bg-red-50 text-red-700 border-red-200";
+  return (
+    <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-bold border ${color}`}>
+      <Star size={13} />
+      {score}/100
+    </span>
+  );
+}
+
+function QualifyTab() {
+  const [cnpj, setCnpj] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<QualificationResult | null>(null);
+  const [error, setError] = useState("");
+
+  function sanitizeCNPJ(v: string) {
+    return v.replace(/\D/g, "").slice(0, 14);
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    setResult(null);
+    const raw = cnpj.replace(/\D/g, "");
+    if (raw.length !== 14) {
+      setError("CNPJ deve ter 14 dígitos.");
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/ia/qualify/${raw}`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) {
+        if (res.status === 402) setError("Créditos insuficientes.");
+        else if (res.status === 404) setError("Empresa não encontrada na base.");
+        else setError(data.error ?? "Erro ao qualificar.");
+        return;
+      }
+      setResult(data);
+    } catch {
+      setError("Erro de conexão. Tente novamente.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="bg-white border border-gray-200 rounded-xl p-5 flex flex-col gap-4">
+        <div>
+          <h2 className="text-base font-semibold text-gray-900 flex items-center gap-2">
+            <Star size={16} className="text-purple-600" />
+            Qualificar Empresa
+          </h2>
+          <p className="text-sm text-gray-500 mt-0.5">
+            Receba um score de 0–100 com justificativa detalhada. Custa 10 créditos por CNPJ.
+          </p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">CNPJ</label>
+            <input
+              type="text"
+              value={cnpj}
+              onChange={(e) => setCnpj(sanitizeCNPJ(e.target.value))}
+              placeholder="00000000000000"
+              maxLength={14}
+              required
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-purple-500"
+            />
+          </div>
+
+          {error && (
+            <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+              {error}
+            </p>
+          )}
+
+          <button
+            type="submit"
+            disabled={loading || cnpj.length !== 14}
+            className="inline-flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-60 text-white font-medium px-5 py-2.5 rounded-lg text-sm transition-colors"
+          >
+            <Sparkles size={14} />
+            {loading ? "Qualificando..." : "Qualificar (10 créditos)"}
+          </button>
+        </form>
+      </div>
+
+      <div className="bg-white border border-gray-200 rounded-xl p-5 flex flex-col gap-4">
+        <div>
+          <h2 className="text-base font-semibold text-gray-900">Resultado da Qualificação</h2>
+          <p className="text-sm text-gray-500 mt-0.5">
+            Score e justificativa gerados por IA
+          </p>
+        </div>
+
+        {!result && !loading && (
+          <div className="flex-1 flex flex-col items-center justify-center py-10 text-gray-400 gap-2">
+            <Star size={32} className="opacity-30" />
+            <p className="text-sm">O resultado aparecerá aqui após a qualificação</p>
+          </div>
+        )}
+
+        {loading && (
+          <div className="flex-1 flex flex-col items-center justify-center py-10 text-gray-400 gap-2">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600" />
+            <p className="text-sm">Consultando IA...</p>
+          </div>
+        )}
+
+        {result && (
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center gap-3">
+              <ScoreBadge score={result.score} />
+              <div>
+                <p className="text-xs text-gray-500 font-mono">{result.cnpj}</p>
+                {result.from_cache && (
+                  <p className="text-xs text-gray-400 mt-0.5">Resultado em cache · 0 créditos debitados</p>
+                )}
+                {!result.from_cache && (
+                  <p className="text-xs text-gray-400 mt-0.5">{result.credits_used} crédito{result.credits_used !== 1 ? "s" : ""} debitado{result.credits_used !== 1 ? "s" : ""}</p>
+                )}
+              </div>
+            </div>
+
+            <div className="bg-gray-50 border border-gray-100 rounded-xl p-4">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Justificativa</p>
+              <p className="text-sm text-gray-700 leading-relaxed">{result.justification}</p>
+            </div>
+
+            <p className="text-xs text-gray-400">Modelo: {result.model}</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function IntelligencePage() {
-  const [tab, setTab] = useState<"cnae" | "template">("cnae");
+  const [tab, setTab] = useState<"cnae" | "template" | "qualify">("cnae");
 
   return (
     <div className="max-w-5xl mx-auto flex flex-col gap-6">
@@ -314,7 +468,7 @@ export default function IntelligencePage() {
           Inteligência Artificial
         </h1>
         <p className="text-sm text-gray-500 mt-0.5">
-          Assistentes inteligentes para otimizar seu trabalho com CNAEs e templates de mensagem
+          Assistentes inteligentes para CNAEs, templates de mensagem e qualificação de leads
         </p>
       </div>
 
@@ -337,9 +491,20 @@ export default function IntelligencePage() {
           <MessageSquare size={14} />
           Gerador de Templates
         </button>
+        <button
+          onClick={() => setTab("qualify")}
+          className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+            tab === "qualify" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"
+          }`}
+        >
+          <Star size={14} />
+          Qualificar CNPJ
+        </button>
       </div>
 
-      {tab === "cnae" ? <CNAEAssistant /> : <TemplateGenerator />}
+      {tab === "cnae" && <CNAEAssistant />}
+      {tab === "template" && <TemplateGenerator />}
+      {tab === "qualify" && <QualifyTab />}
     </div>
   );
 }

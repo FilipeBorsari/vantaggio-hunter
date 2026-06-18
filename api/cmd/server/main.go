@@ -17,6 +17,7 @@ import (
 	"github.com/vantaggio/prospect-api/internal/companies"
 	"github.com/vantaggio/prospect-api/internal/credits"
 	"github.com/vantaggio/prospect-api/internal/exports"
+	"github.com/vantaggio/prospect-api/internal/ia"
 	"github.com/vantaggio/prospect-api/internal/searches"
 	"github.com/vantaggio/prospect-api/pkg/db"
 	"github.com/vantaggio/prospect-api/pkg/httputil"
@@ -71,6 +72,14 @@ func main() {
 	exportsSvc := exports.NewService(exportsRepo, creditsSvc, encKey)
 	exportsHandler := exports.NewHandler(exportsSvc, redisClient)
 
+	iaProvider := ia.NewProvider(ia.Config{
+		Provider:  os.Getenv("AI_PROVIDER"),
+		ChatModel: os.Getenv("AI_CHAT_MODEL"),
+	})
+	iaRepo := ia.NewPostgresRepository(pool)
+	iaSvc := ia.NewService(iaRepo, creditsSvc, iaProvider)
+	iaHandler := ia.NewHandler(iaSvc)
+
 	// Start ETL job
 	go analytics.StartETLJob(ctx, analyticsSvc)
 
@@ -120,6 +129,9 @@ func main() {
 		r.Get("/analytics/daily-consumption", analyticsHandler.GetDailyConsumption)
 		r.Get("/analytics/top-cnaes", analyticsHandler.GetTopCNAEs)
 		r.Get("/analytics/funnel", analyticsHandler.GetFunnel)
+
+		r.Post("/ia/qualify/{cnpj}", iaHandler.Qualify)
+		r.Get("/ia/qualifications", iaHandler.ListQualifications)
 
 		r.Get("/crm/integrations", exportsHandler.GetIntegration)
 		r.Post("/crm/integrations", exportsHandler.CreateIntegration)
