@@ -13,6 +13,7 @@ import (
 	"github.com/vantaggio/prospect-api/internal/admin"
 	authpkg "github.com/vantaggio/prospect-api/internal/auth"
 	"github.com/vantaggio/prospect-api/internal/companies"
+	"github.com/vantaggio/prospect-api/internal/credits"
 	"github.com/vantaggio/prospect-api/internal/searches"
 	"github.com/vantaggio/prospect-api/pkg/db"
 	"github.com/vantaggio/prospect-api/pkg/httputil"
@@ -46,9 +47,13 @@ func main() {
 	adminSvc := admin.NewService(adminRepo)
 	adminHandler := admin.NewHandler(adminSvc)
 
+	creditsRepo := credits.NewPostgresRepository(pool)
+	creditsSvc := credits.NewService(creditsRepo)
+	creditsHandler := credits.NewHandler(creditsSvc)
+
 	companiesRepo := companies.NewPostgresRepository(pool)
 	companiesSvc := companies.NewService(companiesRepo)
-	companiesHandler := companies.NewHandler(companiesSvc)
+	companiesHandler := companies.NewHandler(companiesSvc, creditsSvc)
 
 	searchesRepo := searches.NewPostgresRepository(pool)
 	searchesSvc := searches.NewService(searchesRepo)
@@ -56,7 +61,7 @@ func main() {
 
 	// Start search workers
 	workerCount := workerConcurrency()
-	worker := searches.NewWorker(searchesRepo, redisClient)
+	worker := searches.NewWorker(searchesRepo, redisClient, creditsSvc)
 	for i := 0; i < workerCount; i++ {
 		go worker.Run(ctx)
 	}
@@ -88,6 +93,9 @@ func main() {
 		r.Get("/searches", searchesHandler.List)
 		r.Get("/searches/{id}", searchesHandler.GetByID)
 
+		r.Get("/credits/balance", creditsHandler.GetBalance)
+		r.Get("/credits/transactions", creditsHandler.ListTransactions)
+
 		r.Group(func(r chi.Router) {
 			r.Use(authpkg.RequireRole("admin"))
 			r.Get("/admin/plans", adminHandler.ListPlans)
@@ -95,6 +103,7 @@ func main() {
 			r.Post("/admin/organizations", adminHandler.CreateOrg)
 			r.Post("/admin/organizations/{id}/users", adminHandler.CreateUser)
 			r.Patch("/admin/organizations/{id}/users/{userId}", adminHandler.SetUserActive)
+			r.Post("/admin/credits/add", creditsHandler.AdminAddCredits)
 		})
 	})
 

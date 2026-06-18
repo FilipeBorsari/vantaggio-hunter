@@ -2,21 +2,26 @@ package companies
 
 import (
 	"errors"
+	"fmt"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
+	authpkg "github.com/vantaggio/prospect-api/internal/auth"
+	"github.com/vantaggio/prospect-api/internal/credits"
 	"github.com/vantaggio/prospect-api/internal/domain"
 	"github.com/vantaggio/prospect-api/pkg/httputil"
 )
 
 type Handler struct {
-	svc ServiceInterface
+	svc       ServiceInterface
+	creditSvc credits.ServiceInterface
 }
 
-func NewHandler(svc ServiceInterface) *Handler {
-	return &Handler{svc: svc}
+func NewHandler(svc ServiceInterface, creditSvc credits.ServiceInterface) *Handler {
+	return &Handler{svc: svc, creditSvc: creditSvc}
 }
 
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
@@ -58,6 +63,40 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) GetByCNPJ(w http.ResponseWriter, r *http.Request) {
 	cnpj := chi.URLParam(r, "cnpj")
+	orgID, _ := r.Context().Value(authpkg.ContextKeyOrgID).(string)
+	userID, _ := r.Context().Value(authpkg.ContextKeyUserID).(string)
+
+	if h.creditSvc != nil && orgID != "" {
+		tx, err := h.creditSvc.BeginTx(r.Context())
+		if err != nil {
+			slog.ErrorContext(r.Context(), "begin credit tx for company detail", "error", err)
+			httputil.Error(w, http.StatusInternalServerError, "erro interno")
+			return
+		}
+
+		deductErr := h.creditSvc.Deduct(r.Context(), tx, orgID, userID,
+			10,
+			domain.CreditTxCompanyDetail,
+			nil,
+			fmt.Sprintf("Consulta CNPJ: %s", cnpj),
+		)
+		if deductErr != nil {
+			_ = tx.Rollback(r.Context())
+			if errors.Is(deductErr, domain.ErrInsufficientCredits) {
+				httputil.Error(w, http.StatusPaymentRequired, "créditos insuficientes")
+				return
+			}
+			slog.ErrorContext(r.Context(), "deduct credits for company detail", "cnpj", cnpj, "error", deductErr)
+			httputil.Error(w, http.StatusInternalServerError, "erro interno")
+			return
+		}
+		if err := tx.Commit(r.Context()); err != nil {
+			slog.ErrorContext(r.Context(), "commit credit tx for company detail", "error", err)
+			httputil.Error(w, http.StatusInternalServerError, "erro interno")
+			return
+		}
+	}
+
 	company, err := h.svc.GetByCNPJ(r.Context(), cnpj)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
