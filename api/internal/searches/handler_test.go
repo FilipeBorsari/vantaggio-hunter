@@ -14,6 +14,13 @@ import (
 	"github.com/vantaggio/prospect-api/internal/searches"
 )
 
+// stubQueuer satisfies searches.Queuer without a live Redis connection.
+type stubQueuer struct{}
+
+func (stubQueuer) RPush(_ context.Context, _ string, _ ...interface{}) *redis.IntCmd {
+	return redis.NewIntCmd(context.Background())
+}
+
 // mockSvc implements searches.ServiceInterface for testing.
 type mockSvc struct {
 	createFn      func(ctx context.Context, orgID, userID string, mode domain.SearchMode, filters domain.SearchFilters, query *string) (*domain.Search, error)
@@ -35,13 +42,11 @@ func (m *mockSvc) SearchCNAEs(ctx context.Context, q string) ([]domain.CNAE, err
 	return m.searchCNAEsFn(ctx, q)
 }
 
-func newTestRedis() *redis.Client {
-	return redis.NewClient(&redis.Options{Addr: "localhost:6379"})
-}
+func newTestQueue() searches.Queuer { return stubQueuer{} }
 
 func TestHandler_Create_InvalidMode(t *testing.T) {
 	svc := &mockSvc{}
-	h := searches.NewHandler(svc, newTestRedis())
+	h := searches.NewHandler(svc, newTestQueue())
 
 	body := `{"mode":"invalid"}`
 	req := httptest.NewRequest(http.MethodPost, "/searches", bytes.NewBufferString(body))
@@ -60,7 +65,7 @@ func TestHandler_Create_InvalidInput(t *testing.T) {
 			return nil, searches.ErrInvalidSearchInput
 		},
 	}
-	h := searches.NewHandler(svc, newTestRedis())
+	h := searches.NewHandler(svc, newTestQueue())
 
 	body := `{"mode":"structured","filters":{}}`
 	req := httptest.NewRequest(http.MethodPost, "/searches", bytes.NewBufferString(body))
@@ -79,7 +84,7 @@ func TestHandler_GetByID_NotFound(t *testing.T) {
 			return nil, domain.ErrNotFound
 		},
 	}
-	h := searches.NewHandler(svc, newTestRedis())
+	h := searches.NewHandler(svc, newTestQueue())
 
 	r := chi.NewRouter()
 	r.Get("/searches/{id}", h.GetByID)
@@ -99,7 +104,7 @@ func TestHandler_List_OK(t *testing.T) {
 			return &domain.SearchListResponse{Data: []domain.Search{}, Total: 0}, nil
 		},
 	}
-	h := searches.NewHandler(svc, newTestRedis())
+	h := searches.NewHandler(svc, newTestQueue())
 
 	req := httptest.NewRequest(http.MethodGet, "/searches", nil)
 	rec := httptest.NewRecorder()
@@ -125,7 +130,7 @@ func TestHandler_SearchCNAEs_OK(t *testing.T) {
 			return []domain.CNAE{{Code: "4520-0/01", Description: "Manutenção e reparação"}}, nil
 		},
 	}
-	h := searches.NewHandler(svc, newTestRedis())
+	h := searches.NewHandler(svc, newTestQueue())
 
 	req := httptest.NewRequest(http.MethodGet, "/cnaes?q=manutencao", nil)
 	rec := httptest.NewRecorder()

@@ -16,10 +16,11 @@ type mockRepo struct {
 	getByIDForWorkerFn  func(ctx context.Context, id string) (*domain.Search, error)
 	listFn              func(ctx context.Context, orgID string, page, limit int) ([]domain.Search, int, error)
 	updateStatusFn      func(ctx context.Context, id string, status domain.SearchStatus, resultCount *int, errMsg *string) error
-	runStructuredFn     func(ctx context.Context, searchID string, f domain.SearchFilters) (int, error)
-	runSemanticFn       func(ctx context.Context, searchID string, f domain.SearchFilters, vec []float32) (int, error)
-	getResultsFn        func(ctx context.Context, searchID string, page, limit int) ([]domain.SearchResult, int, error)
-	searchCNAEsFn       func(ctx context.Context, q string) ([]domain.CNAE, error)
+	runStructuredFn        func(ctx context.Context, searchID string, f domain.SearchFilters) (int, error)
+	runSemanticFn          func(ctx context.Context, searchID string, f domain.SearchFilters, vec []float32) (int, error)
+	getResultsFn           func(ctx context.Context, searchID string, page, limit int) ([]domain.SearchResult, int, error)
+	searchCNAEsFn          func(ctx context.Context, q string) ([]domain.CNAE, error)
+	recoverStaleSearchesFn func(ctx context.Context, staleMinutes int) (int64, error)
 }
 
 func (m *mockRepo) Create(ctx context.Context, s *domain.Search) error {
@@ -48,6 +49,12 @@ func (m *mockRepo) GetResults(ctx context.Context, searchID string, page, limit 
 }
 func (m *mockRepo) SearchCNAEs(ctx context.Context, q string) ([]domain.CNAE, error) {
 	return m.searchCNAEsFn(ctx, q)
+}
+func (m *mockRepo) RecoverStaleSearches(ctx context.Context, staleMinutes int) (int64, error) {
+	if m.recoverStaleSearchesFn != nil {
+		return m.recoverStaleSearchesFn(ctx, staleMinutes)
+	}
+	return 0, nil
 }
 
 func TestService_Create_Structured_OK(t *testing.T) {

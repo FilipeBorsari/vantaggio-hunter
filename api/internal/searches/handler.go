@@ -1,6 +1,7 @@
 package searches
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"log/slog"
@@ -8,18 +9,23 @@ import (
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/redis/go-redis/v9"
 	authpkg "github.com/vantaggio/prospect-api/internal/auth"
 	"github.com/vantaggio/prospect-api/internal/domain"
 	"github.com/vantaggio/prospect-api/pkg/httputil"
-	"github.com/redis/go-redis/v9"
 )
+
+// Queuer enqueues a search ID for async processing.
+type Queuer interface {
+	RPush(ctx context.Context, key string, values ...interface{}) *redis.IntCmd
+}
 
 type Handler struct {
 	svc   ServiceInterface
-	queue *redis.Client
+	queue Queuer
 }
 
-func NewHandler(svc ServiceInterface, queue *redis.Client) *Handler {
+func NewHandler(svc ServiceInterface, queue Queuer) *Handler {
 	return &Handler{svc: svc, queue: queue}
 }
 
