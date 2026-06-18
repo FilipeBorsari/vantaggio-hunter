@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   Brain,
   Building2,
+  CreditCard,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -12,6 +13,7 @@ import {
   ShieldCheck,
   X,
 } from "lucide-react";
+import CreditBalance from "@/components/credits/CreditBalance";
 import { useState } from "react";
 
 interface AppLayoutProps {
@@ -40,9 +42,21 @@ const navItems = [
     roles: ["admin", "manager", "operator"] as string[],
   },
   {
+    href: "/credits",
+    label: "Créditos",
+    icon: CreditCard,
+    roles: ["admin", "manager"] as string[],
+  },
+  {
     href: "/admin/organizations",
-    label: "Admin",
+    label: "Organizações",
     icon: ShieldCheck,
+    roles: ["admin"] as string[],
+  },
+  {
+    href: "/admin/credits",
+    label: "Distribuir Créditos",
+    icon: CreditCard,
     roles: ["admin"] as string[],
   },
 ];
@@ -147,9 +161,12 @@ export default function AppLayout({ children, role, userEmail }: AppLayoutProps)
           >
             <Menu size={20} />
           </button>
-          <div className="flex items-center gap-2 ml-auto">
-            <LayoutDashboard size={16} className="text-gray-400 hidden md:block" />
-            <span className="text-sm text-gray-600">{userEmail}</span>
+          <div className="flex items-center gap-4 ml-auto">
+            <CreditBalance />
+            <div className="flex items-center gap-2">
+              <LayoutDashboard size={16} className="text-gray-400 hidden md:block" />
+              <span className="text-sm text-gray-600">{userEmail}</span>
+            </div>
             <button
               onClick={handleLogout}
               className="ml-2 p-1 rounded-md text-gray-400 hover:text-gray-600 md:hidden"
