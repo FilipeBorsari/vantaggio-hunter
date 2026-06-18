@@ -24,6 +24,12 @@ interface AppLayoutProps {
 
 const navItems = [
   {
+    href: "/dashboard",
+    label: "Dashboard",
+    icon: LayoutDashboard,
+    roles: ["admin", "manager", "operator"] as string[],
+  },
+  {
     href: "/search",
     label: "Busca",
     icon: Search,

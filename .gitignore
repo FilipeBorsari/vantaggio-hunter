@@ -6,16 +6,17 @@ web/node_modules/
 *.csv
 DADOS/
 ingestion.log
+ingestao.log
 embeddings.log
 .ingestion_progress
 postgres_data/
 STEP-00-infraestrutura.md
 
-STEP-01-ingestao-receita.md
-STEP-02-auth-saas-api.md
-STEP-03-busca-frontend.md
-STEP-04-creditos.md
-STEP-05-dashboard.md
-STEP-06-crm-export.md
-STEP-07-inteligencia.md
-STEP-08-reseller.md
+./steps/STEP-01-ingestao-receita.md
+./steps/STEP-02-auth-saas-api.md
+./steps/STEP-03-busca-frontend.md
+./steps/STEP-04-creditos.md
+./steps/STEP-05-dashboard.md
+./steps/STEP-06-crm-export.md
+./steps/STEP-07-inteligencia.md
+./steps/STEP-08-reseller.md

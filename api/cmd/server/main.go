@@ -11,6 +11,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	chiMiddleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/vantaggio/prospect-api/internal/admin"
+	"github.com/vantaggio/prospect-api/internal/analytics"
 	authpkg "github.com/vantaggio/prospect-api/internal/auth"
 	"github.com/vantaggio/prospect-api/internal/companies"
 	"github.com/vantaggio/prospect-api/internal/credits"
@@ -59,6 +60,13 @@ func main() {
 	searchesSvc := searches.NewService(searchesRepo)
 	searchesHandler := searches.NewHandler(searchesSvc, redisClient)
 
+	analyticsRepo := analytics.NewPostgresRepository(pool)
+	analyticsSvc := analytics.NewService(analyticsRepo)
+	analyticsHandler := analytics.NewHandler(analyticsSvc)
+
+	// Start ETL job
+	go analytics.StartETLJob(ctx, analyticsSvc)
+
 	// Start search workers
 	workerCount := workerConcurrency()
 	worker := searches.NewWorker(searchesRepo, redisClient, creditsSvc)
@@ -96,6 +104,11 @@ func main() {
 		r.Get("/credits/balance", creditsHandler.GetBalance)
 		r.Get("/credits/transactions", creditsHandler.ListTransactions)
 
+		r.Get("/analytics/kpis", analyticsHandler.GetKPIs)
+		r.Get("/analytics/daily-consumption", analyticsHandler.GetDailyConsumption)
+		r.Get("/analytics/top-cnaes", analyticsHandler.GetTopCNAEs)
+		r.Get("/analytics/funnel", analyticsHandler.GetFunnel)
+
 		r.Group(func(r chi.Router) {
 			r.Use(authpkg.RequireRole("admin"))
 			r.Get("/admin/plans", adminHandler.ListPlans)
@@ -104,6 +117,7 @@ func main() {
 			r.Post("/admin/organizations/{id}/users", adminHandler.CreateUser)
 			r.Patch("/admin/organizations/{id}/users/{userId}", adminHandler.SetUserActive)
 			r.Post("/admin/credits/add", creditsHandler.AdminAddCredits)
+			r.Post("/internal/etl/run", analyticsHandler.TriggerETL)
 		})
 	})
 
