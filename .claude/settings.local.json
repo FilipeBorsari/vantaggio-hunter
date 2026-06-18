@@ -8,7 +8,11 @@
       "Read(//usr/local/go/**)",
       "Read(//usr/local/**)",
       "Read(//home/filipeborsari/**)",
-      "Read(//home/filipeborsari/go/**)"
+      "Read(//home/filipeborsari/go/**)",
+      "Bash(sudo systemctl start docker)",
+      "Bash(/home/filipeborsari/go/bin/go test *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000/)",
+      "Bash(make:*)", "Bash(go:*)", "Read(*)", "Edit(*)"
     ]
   }
 }
