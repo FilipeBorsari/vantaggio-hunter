@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -12,34 +13,47 @@ import (
 	"time"
 
 	"github.com/redis/go-redis/v9"
+	"github.com/vantaggio/prospect-api/internal/credits"
 	"github.com/vantaggio/prospect-api/internal/domain"
 )
 
 const (
-	queueKey    = "queue:searches"
+	queueKey     = "queue:searches"
 	blpopTimeout = 5 * time.Second
 )
 
 type Worker struct {
-	repo   Repository
-	queue  *redis.Client
-	client *http.Client
+	repo      Repository
+	queue     *redis.Client
+	creditSvc credits.ServiceInterface
+	client    *http.Client
 }
 
-func NewWorker(repo Repository, queue *redis.Client) *Worker {
+func NewWorker(repo Repository, queue *redis.Client, creditSvc credits.ServiceInterface) *Worker {
 	return &Worker{
-		repo:   repo,
-		queue:  queue,
-		client: &http.Client{Timeout: 30 * time.Second},
+		repo:      repo,
+		queue:     queue,
+		creditSvc: creditSvc,
+		client:    &http.Client{Timeout: 30 * time.Second},
 	}
 }
 
+const staleMinutes = 5
+
 // Run processes searches from the Redis queue until ctx is cancelled.
+// On startup it recovers any searches that were stuck in "processing" when
+// the server last shut down, and re-checks every staleMinutes minutes.
 func (w *Worker) Run(ctx context.Context) {
+	w.recoverStale(ctx)
+	recoveryTicker := time.NewTicker(staleMinutes * time.Minute)
+	defer recoveryTicker.Stop()
+
 	for {
 		select {
 		case <-ctx.Done():
 			return
+		case <-recoveryTicker.C:
+			w.recoverStale(ctx)
 		default:
 		}
 
@@ -58,6 +72,17 @@ func (w *Worker) Run(ctx context.Context) {
 		if err := w.process(ctx, searchID); err != nil {
 			slog.ErrorContext(ctx, "worker: process search failed", "search_id", searchID, "error", err)
 		}
+	}
+}
+
+func (w *Worker) recoverStale(ctx context.Context) {
+	n, err := w.repo.RecoverStaleSearches(ctx, staleMinutes)
+	if err != nil {
+		slog.ErrorContext(ctx, "worker: recover stale searches", "error", err)
+		return
+	}
+	if n > 0 {
+		slog.InfoContext(ctx, "worker: recovered stale searches", "count", n)
 	}
 }
 
@@ -81,6 +106,37 @@ func (w *Worker) process(ctx context.Context, searchID string) error {
 			slog.ErrorContext(ctx, "worker: update to failed", "search_id", searchID, "error", err)
 		}
 		return execErr
+	}
+
+	// Deduct credits atomically in a transaction.
+	if count > 0 && w.creditSvc != nil {
+		tx, err := w.creditSvc.BeginTx(ctx)
+		if err != nil {
+			return fmt.Errorf("begin credit tx: %w", err)
+		}
+
+		refID := search.ID
+		deductErr := w.creditSvc.Deduct(ctx, tx, search.OrgID, search.UserID,
+			count,
+			domain.CreditTxSearch,
+			&refID,
+			fmt.Sprintf("Busca: %d leads retornados", count),
+		)
+		if deductErr != nil {
+			_ = tx.Rollback(ctx)
+			msg := deductErr.Error()
+			failStatus := domain.SearchStatusFailed
+			if err := w.repo.UpdateStatus(ctx, searchID, failStatus, nil, &msg); err != nil {
+				slog.ErrorContext(ctx, "worker: update to failed (credits)", "search_id", searchID, "error", err)
+			}
+			if errors.Is(deductErr, domain.ErrInsufficientCredits) {
+				return nil // expected business error, not a worker fault
+			}
+			return deductErr
+		}
+		if err := tx.Commit(ctx); err != nil {
+			return fmt.Errorf("commit credit tx: %w", err)
+		}
 	}
 
 	doneStatus := domain.SearchStatusDone

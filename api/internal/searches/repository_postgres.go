@@ -150,6 +150,20 @@ func (r *postgresRepo) UpdateStatus(ctx context.Context, id string, status domai
 	return nil
 }
 
+func (r *postgresRepo) RecoverStaleSearches(ctx context.Context, staleMinutes int) (int64, error) {
+	tag, err := r.db.Exec(ctx,
+		`UPDATE tb_searches
+		 SET status = 'queued', error_msg = NULL
+		 WHERE status = 'processing'
+		   AND created_at < now() - ($1 * INTERVAL '1 minute')`,
+		staleMinutes,
+	)
+	if err != nil {
+		return 0, fmt.Errorf("recover stale searches: %w", err)
+	}
+	return tag.RowsAffected(), nil
+}
+
 func (r *postgresRepo) RunStructuredSearch(ctx context.Context, searchID string, f domain.SearchFilters) (int, error) {
 	var conds []string
 	var args []any
