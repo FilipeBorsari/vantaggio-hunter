@@ -3,10 +3,12 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
+  Brain,
   Building2,
   LayoutDashboard,
   LogOut,
   Menu,
+  Search,
   ShieldCheck,
   X,
 } from "lucide-react";
@@ -20,9 +22,21 @@ interface AppLayoutProps {
 
 const navItems = [
   {
+    href: "/search",
+    label: "Busca",
+    icon: Search,
+    roles: ["admin", "manager", "operator"] as string[],
+  },
+  {
     href: "/companies",
     label: "Lead Bank",
     icon: Building2,
+    roles: ["admin", "manager", "operator"] as string[],
+  },
+  {
+    href: "/intelligence",
+    label: "Inteligência",
+    icon: Brain,
     roles: ["admin", "manager", "operator"] as string[],
   },
   {

@@ -6,27 +6,37 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"strconv"
 
 	"github.com/go-chi/chi/v5"
 	chiMiddleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/vantaggio/prospect-api/internal/admin"
 	authpkg "github.com/vantaggio/prospect-api/internal/auth"
 	"github.com/vantaggio/prospect-api/internal/companies"
+	"github.com/vantaggio/prospect-api/internal/searches"
 	"github.com/vantaggio/prospect-api/pkg/db"
 	"github.com/vantaggio/prospect-api/pkg/httputil"
 	apimiddleware "github.com/vantaggio/prospect-api/pkg/middleware"
+	redispkg "github.com/vantaggio/prospect-api/pkg/redis"
 )
 
 func main() {
 	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, nil)))
 
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	pool, err := db.NewPool(ctx)
 	if err != nil {
 		log.Fatalf("db: %v", err)
 	}
 	defer pool.Close()
+
+	redisClient, err := redispkg.NewClient()
+	if err != nil {
+		log.Fatalf("redis: %v", err)
+	}
+	defer redisClient.Close()
 
 	authRepo := authpkg.NewPostgresRepository(pool)
 	authSvc := authpkg.NewService(authRepo)
@@ -39,6 +49,18 @@ func main() {
 	companiesRepo := companies.NewPostgresRepository(pool)
 	companiesSvc := companies.NewService(companiesRepo)
 	companiesHandler := companies.NewHandler(companiesSvc)
+
+	searchesRepo := searches.NewPostgresRepository(pool)
+	searchesSvc := searches.NewService(searchesRepo)
+	searchesHandler := searches.NewHandler(searchesSvc, redisClient)
+
+	// Start search workers
+	workerCount := workerConcurrency()
+	worker := searches.NewWorker(searchesRepo, redisClient)
+	for i := 0; i < workerCount; i++ {
+		go worker.Run(ctx)
+	}
+	slog.Info("search workers started", "count", workerCount)
 
 	r := chi.NewRouter()
 	r.Use(chiMiddleware.Logger)
@@ -60,6 +82,12 @@ func main() {
 		r.Get("/companies", companiesHandler.List)
 		r.Get("/companies/{cnpj}", companiesHandler.GetByCNPJ)
 
+		r.Get("/cnaes", searchesHandler.SearchCNAEs)
+
+		r.Post("/searches", searchesHandler.Create)
+		r.Get("/searches", searchesHandler.List)
+		r.Get("/searches/{id}", searchesHandler.GetByID)
+
 		r.Group(func(r chi.Router) {
 			r.Use(authpkg.RequireRole("admin"))
 			r.Get("/admin/plans", adminHandler.ListPlans)
@@ -78,4 +106,12 @@ func main() {
 	if err := http.ListenAndServe(":"+port, r); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func workerConcurrency() int {
+	n, err := strconv.Atoi(os.Getenv("SEARCH_WORKERS"))
+	if err != nil || n < 1 {
+		return 2
+	}
+	return n
 }

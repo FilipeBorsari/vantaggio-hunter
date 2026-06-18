@@ -134,7 +134,7 @@ func field(rec []string, i int) string {
 	if i >= len(rec) {
 		return ""
 	}
-	return strings.TrimSpace(rec[i])
+	return strings.TrimSpace(strings.ReplaceAll(rec[i], "\x00", ""))
 }
 
 // ---- parsers ----

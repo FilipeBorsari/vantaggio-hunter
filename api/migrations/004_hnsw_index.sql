@@ -1,16 +1,15 @@
 -- +goose Up
 
--- Aumenta a memória de manutenção para construção eficiente do índice HNSW.
--- Execute esta migration APÓS a ingestão completa e a geração de embeddings;
--- rodá-la com a tabela vazia não causa erro, mas o índice não terá utilidade.
-SET maintenance_work_mem = '2GB';
+-- Desabilita workers paralelos para evitar problema de shared memory no Docker.
+-- Em produção, ajuste max_parallel_maintenance_workers conforme recursos disponíveis.
+SET max_parallel_maintenance_workers = 0;
 
 CREATE INDEX IF NOT EXISTS idx_companies_embedding
     ON tb_companies
     USING hnsw (embedding vector_cosine_ops)
     WITH (m = 16, ef_construction = 64);
 
-RESET maintenance_work_mem;
+RESET max_parallel_maintenance_workers;
 
 -- +goose Down
 
