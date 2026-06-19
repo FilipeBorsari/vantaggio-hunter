@@ -53,3 +53,17 @@ type CompanyListResponse struct {
 	Page  int       `json:"page"`
 	Limit int       `json:"limit"`
 }
+
+// CompanyEmbedInput holds the data needed to generate a company's embedding.
+type CompanyEmbedInput struct {
+	CNPJ string
+	UF   string
+	Text string // pre-built embedding text
+}
+
+// CompanyEmbedding pairs a company identifier with its generated vector.
+type CompanyEmbedding struct {
+	CNPJ   string
+	UF     string
+	Vector []float32
+}

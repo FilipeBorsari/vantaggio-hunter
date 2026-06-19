@@ -30,6 +30,7 @@ CREATE TABLE tb_credit_balances (
 INSERT INTO tb_credit_balances (org_id)
 SELECT id FROM tb_organizations;
 
+-- +goose StatementBegin
 CREATE OR REPLACE FUNCTION update_credit_balance()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -41,6 +42,7 @@ BEGIN
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
+-- +goose StatementEnd
 
 CREATE TRIGGER trg_update_balance
 AFTER INSERT ON tb_credit_transactions

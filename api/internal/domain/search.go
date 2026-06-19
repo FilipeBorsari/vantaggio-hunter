@@ -54,6 +54,7 @@ type SearchResponse struct {
 	Mode        SearchMode     `json:"mode"`
 	Status      SearchStatus   `json:"status"`
 	ResultCount *int           `json:"result_count,omitempty"`
+	ErrorMsg    *string        `json:"error_msg,omitempty"`
 	Results     []SearchResult `json:"results,omitempty"`
 	Page        int            `json:"page,omitempty"`
 	Limit       int            `json:"limit,omitempty"`
