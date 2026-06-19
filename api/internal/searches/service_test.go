@@ -77,6 +77,9 @@ func (m *mockRepo) SaveEmbeddings(ctx context.Context, embeddings []domain.Compa
 	}
 	return nil
 }
+func (m *mockRepo) EstimateCount(_ context.Context, _ domain.SearchMode, _ domain.SearchFilters, _ string) (int, error) {
+	return 0, nil
+}
 
 func TestService_Create_Structured_OK(t *testing.T) {
 	uf := "SP"

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { callAI } from "@/lib/ai";
+import { logger } from "@/lib/logger";
 
 const SYSTEM = `Você é especialista na Classificação Nacional de Atividades Econômicas (CNAE) brasileira.
 Dada uma descrição de negócio em linguagem natural, retorne os CNAEs mais relevantes.
@@ -24,7 +25,7 @@ export async function POST(req: NextRequest) {
   try {
     text = await callAI({ system: SYSTEM, user: `Negócio: ${description}` });
   } catch (err) {
-    console.error("AI error (all providers failed):", err);
+    logger.error("ai: all providers failed for cnae", { error: (err as Error).message });
     return NextResponse.json(
       { error: "Erro ao consultar a IA. Verifique a configuração das chaves de API." },
       { status: 502 },

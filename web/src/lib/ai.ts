@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import OpenAI from "openai";
+import { logger } from "@/lib/logger";
 
 export interface AIMessage {
   system: string;
@@ -23,7 +24,7 @@ export async function callAI(msg: AIMessage): Promise<string> {
       const block = response.content.find((b) => b.type === "text");
       if (block && block.type === "text") return block.text;
     } catch (err) {
-      console.warn("Anthropic failed, falling back to OpenAI:", (err as Error).message);
+      logger.warn("ai: anthropic failed, falling back to OpenAI", { error: (err as Error).message });
     }
   }
 

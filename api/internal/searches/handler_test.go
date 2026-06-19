@@ -41,6 +41,9 @@ func (m *mockSvc) List(ctx context.Context, orgID string, page, limit int) (*dom
 func (m *mockSvc) SearchCNAEs(ctx context.Context, q string) ([]domain.CNAE, error) {
 	return m.searchCNAEsFn(ctx, q)
 }
+func (m *mockSvc) Estimate(_ context.Context, _ domain.SearchMode, _ domain.SearchFilters, _ string) (int, error) {
+	return 0, nil
+}
 
 func newTestQueue() searches.Queuer { return stubQueuer{} }
 

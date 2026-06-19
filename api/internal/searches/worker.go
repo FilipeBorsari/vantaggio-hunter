@@ -155,14 +155,17 @@ func (w *Worker) process(ctx context.Context, searchID string) error {
 			fmt.Sprintf("Busca: %d leads retornados", count),
 		)
 		if deductErr != nil {
-			_ = tx.Rollback(ctx)
+			if rbErr := tx.Rollback(ctx); rbErr != nil {
+				slog.ErrorContext(ctx, "worker: rollback credit tx", "search_id", searchID, "error", rbErr)
+			}
 			msg := deductErr.Error()
 			failStatus := domain.SearchStatusFailed
 			if err := w.repo.UpdateStatus(ctx, searchID, failStatus, nil, &msg); err != nil {
 				slog.ErrorContext(ctx, "worker: update to failed (credits)", "search_id", searchID, "error", err)
 			}
 			if errors.Is(deductErr, domain.ErrInsufficientCredits) {
-				return nil // expected business error, not a worker fault
+				slog.WarnContext(ctx, "worker: insufficient credits, search marked failed", "search_id", searchID, "org_id", search.OrgID)
+				return nil // search already marked failed above; no retry needed
 			}
 			return deductErr
 		}

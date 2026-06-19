@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
 	"os"
 	"strings"
@@ -21,6 +22,7 @@ func Authenticate(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		header := r.Header.Get("Authorization")
 		if !strings.HasPrefix(header, "Bearer ") {
+			slog.DebugContext(r.Context(), "auth: no bearer token", "path", r.URL.Path)
 			http.Error(w, `{"error":"não autorizado"}`, http.StatusUnauthorized)
 			return
 		}
@@ -33,12 +35,14 @@ func Authenticate(next http.Handler) http.Handler {
 			return []byte(os.Getenv("JWT_SECRET")), nil
 		})
 		if err != nil {
+			slog.WarnContext(r.Context(), "auth: invalid or expired token", "path", r.URL.Path, "error", err)
 			http.Error(w, `{"error":"token inválido ou expirado"}`, http.StatusUnauthorized)
 			return
 		}
 		ctx := context.WithValue(r.Context(), ContextKeyUserID, claims.UserID)
 		ctx = context.WithValue(ctx, ContextKeyOrgID, claims.OrgID)
 		ctx = context.WithValue(ctx, ContextKeyRole, claims.Role)
+		slog.DebugContext(ctx, "auth: ok", "user_id", claims.UserID, "org_id", claims.OrgID, "role", claims.Role)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }

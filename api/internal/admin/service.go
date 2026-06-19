@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"time"
 
@@ -126,8 +127,7 @@ func (s *Service) AddCreditsToOrg(ctx context.Context, orgID string, amount int,
 		"amount":      amount,
 		"description": desc,
 	}); logErr != nil {
-		// non-fatal: log but don't fail the business operation
-		_ = logErr
+		slog.WarnContext(ctx, "audit log write failed", "action", "credits.add", "org_id", orgID, "error", logErr)
 	}
 
 	return bal.Balance, nil
@@ -156,7 +156,7 @@ func (s *Service) Impersonate(ctx context.Context, orgID, actorID string) (strin
 	if logErr := s.repo.WriteAuditLog(ctx, &orgIDStr, actorID, "org.impersonate", &targetIDStr, map[string]any{
 		"impersonated_org": orgID,
 	}); logErr != nil {
-		_ = logErr
+		slog.WarnContext(ctx, "audit log write failed", "action", "org.impersonate", "org_id", orgID, "error", logErr)
 	}
 
 	return signed, nil

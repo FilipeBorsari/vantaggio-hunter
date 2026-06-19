@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 
 	"github.com/vantaggio/prospect-api/internal/auth"
 	"github.com/vantaggio/prospect-api/internal/credits"
@@ -50,9 +51,11 @@ func (s *Service) PatchUser(ctx context.Context, userID, orgID, actorID string, 
 	if isActive != nil && !*isActive {
 		targetID := userID
 		orgIDStr := orgID
-		_ = s.repo.WriteAuditLog(ctx, &orgIDStr, actorID, "user.deactivate", &targetID, map[string]any{
+		if err := s.repo.WriteAuditLog(ctx, &orgIDStr, actorID, "user.deactivate", &targetID, map[string]any{
 			"user_id": userID,
-		})
+		}); err != nil {
+			slog.WarnContext(ctx, "audit log write failed", "action", "user.deactivate", "user_id", userID, "error", err)
+		}
 	}
 	return nil
 }
@@ -66,9 +69,11 @@ func (s *Service) DeleteUser(ctx context.Context, userID, orgID, actorID string)
 	}
 	targetID := userID
 	orgIDStr := orgID
-	_ = s.repo.WriteAuditLog(ctx, &orgIDStr, actorID, "user.delete", &targetID, map[string]any{
+	if err := s.repo.WriteAuditLog(ctx, &orgIDStr, actorID, "user.delete", &targetID, map[string]any{
 		"user_id": userID,
-	})
+	}); err != nil {
+		slog.WarnContext(ctx, "audit log write failed", "action", "user.delete", "user_id", userID, "error", err)
+	}
 	return nil
 }
 
@@ -84,10 +89,12 @@ func (s *Service) CreateInvitation(ctx context.Context, orgID, email, role, acto
 
 	orgIDStr := orgID
 	invID := inv.ID
-	_ = s.repo.WriteAuditLog(ctx, &orgIDStr, actorID, "user.invite", &invID, map[string]any{
+	if err := s.repo.WriteAuditLog(ctx, &orgIDStr, actorID, "user.invite", &invID, map[string]any{
 		"email": email,
 		"role":  role,
-	})
+	}); err != nil {
+		slog.WarnContext(ctx, "audit log write failed", "action", "user.invite", "email", email, "error", err)
+	}
 	return inv, nil
 }
 

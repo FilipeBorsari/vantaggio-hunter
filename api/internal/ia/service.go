@@ -107,7 +107,9 @@ func (s *Service) Qualify(ctx context.Context, orgID, userID, cnpj string) (*Qua
 		domain.CreditTxAIQualification, &refID,
 		fmt.Sprintf("Qualificação IA: %s", cnpj),
 	); err != nil {
-		_ = tx.Rollback(ctx)
+		if rbErr := tx.Rollback(ctx); rbErr != nil {
+			slog.ErrorContext(ctx, "ia: rollback after deduct failed", "cnpj", cnpj, "error", rbErr)
+		}
 		if errors.Is(err, domain.ErrInsufficientCredits) {
 			return nil, ErrInsufficientCredits
 		}
@@ -119,20 +121,26 @@ func (s *Service) Qualify(ctx context.Context, orgID, userID, cnpj string) (*Qua
 	case s.semaphore <- struct{}{}:
 		defer func() { <-s.semaphore }()
 	case <-ctx.Done():
-		_ = tx.Rollback(ctx)
+		if rbErr := tx.Rollback(ctx); rbErr != nil {
+			slog.ErrorContext(ctx, "ia: rollback after ctx cancelled", "cnpj", cnpj, "error", rbErr)
+		}
 		return nil, ctx.Err()
 	}
 
 	text, usage, aiErr := s.provider.Chat(ctx, qualifySystemPrompt, buildQualifyPrompt(company))
 	if aiErr != nil {
-		_ = tx.Rollback(ctx)
+		if rbErr := tx.Rollback(ctx); rbErr != nil {
+			slog.ErrorContext(ctx, "ia: rollback after ai call failed", "cnpj", cnpj, "error", rbErr)
+		}
 		slog.ErrorContext(ctx, "ai qualify failed", "cnpj", cnpj, "error", aiErr)
 		return nil, fmt.Errorf("ai call: %w", aiErr)
 	}
 
 	score, justification, parseErr := parseQualifyResponse(text)
 	if parseErr != nil {
-		_ = tx.Rollback(ctx)
+		if rbErr := tx.Rollback(ctx); rbErr != nil {
+			slog.ErrorContext(ctx, "ia: rollback after parse failed", "cnpj", cnpj, "error", rbErr)
+		}
 		slog.ErrorContext(ctx, "parse qualify response", "cnpj", cnpj, "raw", text, "error", parseErr)
 		return nil, fmt.Errorf("parse ai response: %w", parseErr)
 	}
@@ -149,7 +157,9 @@ func (s *Service) Qualify(ctx context.Context, orgID, userID, cnpj string) (*Qua
 		TokensOutput:  usage.Output,
 	}
 	if err := s.repo.Save(ctx, qual); err != nil {
-		_ = tx.Rollback(ctx)
+		if rbErr := tx.Rollback(ctx); rbErr != nil {
+			slog.ErrorContext(ctx, "ia: rollback after save failed", "cnpj", cnpj, "error", rbErr)
+		}
 		return nil, fmt.Errorf("save qualification: %w", err)
 	}
 

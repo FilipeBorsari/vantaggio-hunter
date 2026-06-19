@@ -28,7 +28,8 @@ import (
 )
 
 func main() {
-	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, nil)))
+	logLevel := parseLogLevel(os.Getenv("LOG_LEVEL"))
+	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: logLevel})))
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -107,7 +108,8 @@ func main() {
 	slog.Info("export worker started")
 
 	r := chi.NewRouter()
-	r.Use(chiMiddleware.Logger)
+	r.Use(apimiddleware.RequestID)
+	r.Use(apimiddleware.HTTPLogger)
 	r.Use(chiMiddleware.Recoverer)
 	r.Use(apimiddleware.CORS)
 
@@ -197,9 +199,31 @@ func main() {
 	if port == "" {
 		port = "8080"
 	}
+	slog.Info("startup config",
+		"port", port,
+		"log_level", logLevel.String(),
+		"search_workers", workerCount,
+		"db_configured", os.Getenv("DATABASE_URL") != "",
+		"redis_configured", os.Getenv("REDIS_URL") != "",
+		"jwt_configured", os.Getenv("JWT_SECRET") != "",
+		"encryption_configured", os.Getenv("ENCRYPTION_KEY") != "",
+	)
 	slog.Info("server starting", "port", port)
 	if err := http.ListenAndServe(":"+port, r); err != nil {
 		log.Fatal(err)
+	}
+}
+
+func parseLogLevel(s string) slog.Level {
+	switch s {
+	case "DEBUG":
+		return slog.LevelDebug
+	case "WARN":
+		return slog.LevelWarn
+	case "ERROR":
+		return slog.LevelError
+	default:
+		return slog.LevelInfo
 	}
 }
 

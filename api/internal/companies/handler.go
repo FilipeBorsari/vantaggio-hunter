@@ -82,7 +82,9 @@ func (h *Handler) GetByCNPJ(w http.ResponseWriter, r *http.Request) {
 			fmt.Sprintf("Consulta CNPJ: %s", cnpj),
 		)
 		if deductErr != nil {
-			_ = tx.Rollback(r.Context())
+			if rbErr := tx.Rollback(r.Context()); rbErr != nil {
+				slog.ErrorContext(r.Context(), "rollback credit tx for company detail", "error", rbErr)
+			}
 			if errors.Is(deductErr, domain.ErrInsufficientCredits) {
 				httputil.Error(w, http.StatusPaymentRequired, "créditos insuficientes")
 				return

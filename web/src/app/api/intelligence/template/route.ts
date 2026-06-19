@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { callAI } from "@/lib/ai";
+import { logger } from "@/lib/logger";
 
 const SYSTEM = `Você é especialista em criação de templates para WhatsApp Business API com aprovação Meta.
 Crie templates de mensagem para prospecção de clientes que:
@@ -32,7 +33,7 @@ export async function POST(req: NextRequest) {
   try {
     text = await callAI({ system: SYSTEM, user: `Tipo de template: ${type}` });
   } catch (err) {
-    console.error("AI error (all providers failed):", err);
+    logger.error("ai: all providers failed for template", { error: (err as Error).message });
     return NextResponse.json(
       { error: "Erro ao consultar a IA. Verifique a configuração das chaves de API." },
       { status: 502 },

@@ -188,8 +188,13 @@ func (w *Worker) process(ctx context.Context, exportID string) error {
 			// Debit 1 credit per successfully exported lead.
 			tx, err := w.creditSvc.BeginTx(procCtx)
 			if err != nil {
-				slog.Error("begin credit tx", "cnpj", cnpj, "error", err)
-				successCount++
+				slog.Error("begin credit tx", "cnpj", cnpj, "export_id", exportID, "error", err)
+				failCount++
+				errorLog = append(errorLog, domain.ExportErrorEntry{
+					CNPJ:    cnpj,
+					Error:   fmt.Sprintf("begin credit tx: %v", err),
+					Attempt: attempt,
+				})
 				continue
 			}
 			ref := exportID
@@ -197,13 +202,26 @@ func (w *Worker) process(ctx context.Context, exportID string) error {
 				domain.CreditTxExport, &ref, "Export lead "+cnpj)
 			if deductErr != nil {
 				if rbErr := tx.Rollback(procCtx); rbErr != nil {
-					slog.Error("rollback credit tx", "cnpj", cnpj, "error", rbErr)
+					slog.Error("rollback credit tx", "cnpj", cnpj, "export_id", exportID, "error", rbErr)
 				}
-				slog.Warn("deduct credit after export", "cnpj", cnpj, "error", deductErr)
-			} else {
-				if err := tx.Commit(procCtx); err != nil {
-					slog.Error("commit credit tx", "cnpj", cnpj, "error", err)
-				}
+				slog.Error("deduct credit after export", "cnpj", cnpj, "export_id", exportID, "error", deductErr)
+				failCount++
+				errorLog = append(errorLog, domain.ExportErrorEntry{
+					CNPJ:    cnpj,
+					Error:   fmt.Sprintf("deduct credit: %v", deductErr),
+					Attempt: attempt,
+				})
+				continue
+			}
+			if err := tx.Commit(procCtx); err != nil {
+				slog.Error("commit credit tx", "cnpj", cnpj, "export_id", exportID, "error", err)
+				failCount++
+				errorLog = append(errorLog, domain.ExportErrorEntry{
+					CNPJ:    cnpj,
+					Error:   fmt.Sprintf("commit credit tx: %v", err),
+					Attempt: attempt,
+				})
+				continue
 			}
 			successCount++
 		}
