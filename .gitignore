@@ -11,6 +11,7 @@ embeddings.log
 .ingestion_progress
 postgres_data/
 STEP-00-infraestrutura.md
+local-ideas/
 
 ./steps/STEP-01-ingestao-receita.md
 ./steps/STEP-02-auth-saas-api.md

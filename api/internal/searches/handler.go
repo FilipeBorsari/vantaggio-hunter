@@ -141,6 +141,9 @@ func (h *Handler) Estimate(w http.ResponseWriter, r *http.Request) {
 	if req.Mode == domain.SearchModeStructured && count > maxStructuredCredits {
 		count = maxStructuredCredits
 	}
+	if req.Filters.MaxResults != nil && *req.Filters.MaxResults > 0 && count > *req.Filters.MaxResults {
+		count = *req.Filters.MaxResults
+	}
 	httputil.JSON(w, http.StatusOK, map[string]int{"estimate": count})
 }
 

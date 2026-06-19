@@ -20,6 +20,7 @@ type SearchFilters struct {
 	CapitalMax *float64 `json:"capital_max,omitempty"`
 	Status     *int     `json:"status,omitempty"`
 	Porte      *int     `json:"porte,omitempty"`
+	MaxResults *int     `json:"max_results,omitempty"`
 }
 
 type Search struct {

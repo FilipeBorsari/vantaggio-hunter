@@ -226,7 +226,7 @@ func (w *Worker) generateEmbeddingsForSearch(ctx context.Context, searchID strin
 func (w *Worker) execute(ctx context.Context, s *domain.Search) (int, error) {
 	switch s.Mode {
 	case domain.SearchModeStructured:
-		return w.repo.RunStructuredSearch(ctx, s.ID, s.Filters)
+		return w.repo.RunStructuredSearch(ctx, s.ID, s.OrgID, s.Filters)
 
 	case domain.SearchModeSemantic:
 		if s.QueryText == nil || *s.QueryText == "" {
@@ -236,7 +236,7 @@ func (w *Worker) execute(ctx context.Context, s *domain.Search) (int, error) {
 		if err != nil {
 			return 0, fmt.Errorf("embed query: %w", err)
 		}
-		return w.repo.RunSemanticSearch(ctx, s.ID, s.Filters, vec, *s.QueryText)
+		return w.repo.RunSemanticSearch(ctx, s.ID, s.OrgID, s.Filters, vec, *s.QueryText)
 
 	default:
 		return 0, fmt.Errorf("unknown search mode: %s", s.Mode)

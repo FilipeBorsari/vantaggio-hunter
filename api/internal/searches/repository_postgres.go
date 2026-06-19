@@ -184,7 +184,7 @@ func (r *postgresRepo) ListQueuedSearchIDs(ctx context.Context) ([]string, error
 	return ids, rows.Err()
 }
 
-func (r *postgresRepo) RunStructuredSearch(ctx context.Context, searchID string, f domain.SearchFilters) (int, error) {
+func (r *postgresRepo) RunStructuredSearch(ctx context.Context, searchID, orgID string, f domain.SearchFilters) (int, error) {
 	var conds []string
 	var args []any
 	n := 1
@@ -216,11 +216,20 @@ func (r *postgresRepo) RunStructuredSearch(ctx context.Context, searchID string,
 		args = append(args, *f.Status)
 		n++
 	}
+	conds = append(conds, fmt.Sprintf(`NOT EXISTS (
+		SELECT 1 FROM tb_search_results sr2
+		INNER JOIN tb_searches s2 ON sr2.search_id = s2.id
+		WHERE sr2.cnpj = c.cnpj AND s2.org_id = $%d
+	)`, n))
+	args = append(args, orgID)
+	n++
 	_ = n
 
-	where := ""
-	if len(conds) > 0 {
-		where = "WHERE " + strings.Join(conds, " AND ")
+	where := "WHERE " + strings.Join(conds, " AND ")
+
+	limitVal := 10000
+	if f.MaxResults != nil && *f.MaxResults > 0 && *f.MaxResults < limitVal {
+		limitVal = *f.MaxResults
 	}
 
 	q := fmt.Sprintf(`
@@ -228,7 +237,7 @@ func (r *postgresRepo) RunStructuredSearch(ctx context.Context, searchID string,
 		FROM tb_companies c
 		%s
 		ORDER BY c.cnpj
-		LIMIT 10000`, where)
+		LIMIT %d`, where, limitVal)
 
 	rows, err := r.db.Query(ctx, q, args...)
 	if err != nil {
@@ -262,8 +271,8 @@ func (r *postgresRepo) RunStructuredSearch(ctx context.Context, searchID string,
 	return len(copyRows), nil
 }
 
-func (r *postgresRepo) RunSemanticSearch(ctx context.Context, searchID string, f domain.SearchFilters, queryVec []float32, queryText string) (int, error) {
-	count, err := r.runVectorSearch(ctx, searchID, f, queryVec)
+func (r *postgresRepo) RunSemanticSearch(ctx context.Context, searchID, orgID string, f domain.SearchFilters, queryVec []float32, queryText string) (int, error) {
+	count, err := r.runVectorSearch(ctx, searchID, orgID, f, queryVec)
 	if err != nil {
 		return 0, err
 	}
@@ -271,10 +280,10 @@ func (r *postgresRepo) RunSemanticSearch(ctx context.Context, searchID string, f
 		return count, nil
 	}
 	// Fallback: nenhuma empresa tem embedding ainda — usa full-text search em razao_social.
-	return r.runTextFallback(ctx, searchID, f, queryText)
+	return r.runTextFallback(ctx, searchID, orgID, f, queryText)
 }
 
-func (r *postgresRepo) runVectorSearch(ctx context.Context, searchID string, f domain.SearchFilters, queryVec []float32) (int, error) {
+func (r *postgresRepo) runVectorSearch(ctx context.Context, searchID, orgID string, f domain.SearchFilters, queryVec []float32) (int, error) {
 	var conds []string
 	args := []any{vectorLiteral(queryVec)} // $1 = embedding vector
 	n := 2
@@ -291,16 +300,28 @@ func (r *postgresRepo) runVectorSearch(ctx context.Context, searchID string, f d
 		args = append(args, *f.Status)
 		n++
 	}
+	conds = append(conds, fmt.Sprintf(`NOT EXISTS (
+		SELECT 1 FROM tb_search_results sr2
+		INNER JOIN tb_searches s2 ON sr2.search_id = s2.id
+		WHERE sr2.cnpj = c.cnpj AND s2.org_id = $%d
+	)`, n))
+	args = append(args, orgID)
+	n++
 	_ = n
 
 	where := "WHERE " + strings.Join(conds, " AND ")
+
+	limitVal := 10000
+	if f.MaxResults != nil && *f.MaxResults > 0 && *f.MaxResults < limitVal {
+		limitVal = *f.MaxResults
+	}
 
 	q := fmt.Sprintf(`
 		SELECT c.cnpj, c.embedding <=> $1::vector AS score
 		FROM tb_companies c
 		%s
 		ORDER BY score ASC
-		LIMIT 10000`, where)
+		LIMIT %d`, where, limitVal)
 
 	rows, err := r.db.Query(ctx, q, args...)
 	if err != nil {
@@ -362,7 +383,7 @@ func extractKeywords(text string) []string {
 	return result
 }
 
-func (r *postgresRepo) runTextFallback(ctx context.Context, searchID string, f domain.SearchFilters, queryText string) (int, error) {
+func (r *postgresRepo) runTextFallback(ctx context.Context, searchID, orgID string, f domain.SearchFilters, queryText string) (int, error) {
 	var conds []string
 	var args []any
 	n := 1
@@ -394,15 +415,27 @@ func (r *postgresRepo) runTextFallback(ctx context.Context, searchID string, f d
 		args = append(args, *f.Status)
 		n++
 	}
+	conds = append(conds, fmt.Sprintf(`NOT EXISTS (
+		SELECT 1 FROM tb_search_results sr2
+		INNER JOIN tb_searches s2 ON sr2.search_id = s2.id
+		WHERE sr2.cnpj = c.cnpj AND s2.org_id = $%d
+	)`, n))
+	args = append(args, orgID)
+	n++
 	_ = n
 
 	where := "WHERE " + strings.Join(conds, " AND ")
+
+	limitVal := 10000
+	if f.MaxResults != nil && *f.MaxResults > 0 && *f.MaxResults < limitVal {
+		limitVal = *f.MaxResults
+	}
 
 	q := fmt.Sprintf(`
 		SELECT DISTINCT c.cnpj
 		FROM tb_companies c
 		%s
-		LIMIT 10000`, where)
+		LIMIT %d`, where, limitVal)
 
 	rows, err := r.db.Query(ctx, q, args...)
 	if err != nil {

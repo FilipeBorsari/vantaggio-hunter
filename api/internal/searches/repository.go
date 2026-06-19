@@ -18,8 +18,8 @@ type Repository interface {
 	// ListQueuedSearchIDs returns the IDs of all searches currently in "queued"
 	// status, so the worker can re-push them to Redis after a restart or stale recovery.
 	ListQueuedSearchIDs(ctx context.Context) ([]string, error)
-	RunStructuredSearch(ctx context.Context, searchID string, f domain.SearchFilters) (int, error)
-	RunSemanticSearch(ctx context.Context, searchID string, f domain.SearchFilters, queryVec []float32, queryText string) (int, error)
+	RunStructuredSearch(ctx context.Context, searchID, orgID string, f domain.SearchFilters) (int, error)
+	RunSemanticSearch(ctx context.Context, searchID, orgID string, f domain.SearchFilters, queryVec []float32, queryText string) (int, error)
 	GetResults(ctx context.Context, searchID string, page, limit int) ([]domain.SearchResult, int, error)
 	SearchCNAEs(ctx context.Context, q string) ([]domain.CNAE, error)
 	// GetCompanyEmbedInputs returns up to limit companies from the search results

@@ -21,6 +21,7 @@ interface StructuredFilters {
   city: string;
   capital_min: string;
   status: string;
+  max_results: string;
 }
 
 function CNAEMultiSelect({
@@ -109,7 +110,7 @@ export default function SearchPage() {
   const [mode, setMode] = useState<"structured" | "semantic">("structured");
   const [query, setQuery] = useState("");
   const [filters, setFilters] = useState<StructuredFilters>({
-    cnaes: [], uf: "", city: "", capital_min: "", status: "",
+    cnaes: [], uf: "", city: "", capital_min: "", status: "", max_results: "",
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -136,6 +137,7 @@ export default function SearchPage() {
             filters: {
               uf: currentFilters.uf || undefined,
               status: currentFilters.status ? parseInt(currentFilters.status) : undefined,
+              max_results: currentFilters.max_results ? parseInt(currentFilters.max_results) : undefined,
             },
           }
         : {
@@ -146,6 +148,7 @@ export default function SearchPage() {
               city: currentFilters.city || undefined,
               capital_min: currentFilters.capital_min ? parseFloat(currentFilters.capital_min) : undefined,
               status: currentFilters.status ? parseInt(currentFilters.status) : undefined,
+              max_results: currentFilters.max_results ? parseInt(currentFilters.max_results) : undefined,
             },
           };
       const res = await fetch("/api/searches/estimate", {
@@ -184,6 +187,7 @@ export default function SearchPage() {
               filters: {
                 uf: filters.uf || undefined,
                 status: filters.status ? parseInt(filters.status) : undefined,
+                max_results: filters.max_results ? parseInt(filters.max_results) : undefined,
               },
             }
           : {
@@ -194,6 +198,7 @@ export default function SearchPage() {
                 city: filters.city || undefined,
                 capital_min: filters.capital_min ? parseFloat(filters.capital_min) : undefined,
                 status: filters.status ? parseInt(filters.status) : undefined,
+                max_results: filters.max_results ? parseInt(filters.max_results) : undefined,
               },
             };
 
@@ -293,6 +298,19 @@ export default function SearchPage() {
                 </select>
               </div>
             </div>
+            <div>
+              <label className="block text-xs font-medium text-v-muted mb-1">Limite de leads (opcional)</label>
+              <input
+                type="number"
+                min="1"
+                max="10000"
+                value={filters.max_results}
+                onChange={(e) => setFilters((f) => ({ ...f, max_results: e.target.value }))}
+                placeholder="Ex: 200"
+                className={inputClass}
+              />
+              <p className="text-xs text-v-muted mt-1">Deixe em branco para retornar todos os leads encontrados (máx. 10 000).</p>
+            </div>
           </>
         ) : (
           <>
@@ -347,6 +365,19 @@ export default function SearchPage() {
                   <option value="8">Baixada</option>
                 </select>
               </div>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-v-muted mb-1">Limite de leads (opcional)</label>
+              <input
+                type="number"
+                min="1"
+                max="10000"
+                value={filters.max_results}
+                onChange={(e) => setFilters((f) => ({ ...f, max_results: e.target.value }))}
+                placeholder="Ex: 200"
+                className={inputClass}
+              />
+              <p className="text-xs text-v-muted mt-1">Deixe em branco para retornar todos os leads encontrados (máx. 10 000).</p>
             </div>
           </>
         )}

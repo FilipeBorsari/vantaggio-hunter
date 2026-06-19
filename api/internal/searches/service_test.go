@@ -16,8 +16,8 @@ type mockRepo struct {
 	getByIDForWorkerFn      func(ctx context.Context, id string) (*domain.Search, error)
 	listFn                  func(ctx context.Context, orgID string, page, limit int) ([]domain.Search, int, error)
 	updateStatusFn          func(ctx context.Context, id string, status domain.SearchStatus, resultCount *int, errMsg *string) error
-	runStructuredFn         func(ctx context.Context, searchID string, f domain.SearchFilters) (int, error)
-	runSemanticFn           func(ctx context.Context, searchID string, f domain.SearchFilters, vec []float32, queryText string) (int, error)
+	runStructuredFn         func(ctx context.Context, searchID, orgID string, f domain.SearchFilters) (int, error)
+	runSemanticFn           func(ctx context.Context, searchID, orgID string, f domain.SearchFilters, vec []float32, queryText string) (int, error)
 	getResultsFn            func(ctx context.Context, searchID string, page, limit int) ([]domain.SearchResult, int, error)
 	searchCNAEsFn           func(ctx context.Context, q string) ([]domain.CNAE, error)
 	recoverStaleSearchesFn  func(ctx context.Context, staleMinutes int) (int64, error)
@@ -41,11 +41,11 @@ func (m *mockRepo) List(ctx context.Context, orgID string, page, limit int) ([]d
 func (m *mockRepo) UpdateStatus(ctx context.Context, id string, status domain.SearchStatus, resultCount *int, errMsg *string) error {
 	return m.updateStatusFn(ctx, id, status, resultCount, errMsg)
 }
-func (m *mockRepo) RunStructuredSearch(ctx context.Context, searchID string, f domain.SearchFilters) (int, error) {
-	return m.runStructuredFn(ctx, searchID, f)
+func (m *mockRepo) RunStructuredSearch(ctx context.Context, searchID, orgID string, f domain.SearchFilters) (int, error) {
+	return m.runStructuredFn(ctx, searchID, orgID, f)
 }
-func (m *mockRepo) RunSemanticSearch(ctx context.Context, searchID string, f domain.SearchFilters, vec []float32, queryText string) (int, error) {
-	return m.runSemanticFn(ctx, searchID, f, vec, queryText)
+func (m *mockRepo) RunSemanticSearch(ctx context.Context, searchID, orgID string, f domain.SearchFilters, vec []float32, queryText string) (int, error) {
+	return m.runSemanticFn(ctx, searchID, orgID, f, vec, queryText)
 }
 func (m *mockRepo) GetResults(ctx context.Context, searchID string, page, limit int) ([]domain.SearchResult, int, error) {
 	return m.getResultsFn(ctx, searchID, page, limit)
