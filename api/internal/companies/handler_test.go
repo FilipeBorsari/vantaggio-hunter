@@ -191,6 +191,20 @@ func TestListHandler_InvalidPageDefaultsTo1(t *testing.T) {
 	}
 }
 
+func TestListHandler_PropagatesOrgID(t *testing.T) {
+	svc := &spyCompanySvc{listResp: &domain.CompanyListResponse{}}
+	h := NewHandler(svc, nil)
+
+	r := httptest.NewRequest(http.MethodGet, "/companies", nil)
+	r = withOrgAndUser(r, "org-abc", "user-xyz")
+	w := httptest.NewRecorder()
+	h.List(w, r)
+
+	if svc.capturedFilters.OrgID != "org-abc" {
+		t.Errorf("OrgID = %q, want org-abc", svc.capturedFilters.OrgID)
+	}
+}
+
 func TestListHandler_ServiceError(t *testing.T) {
 	svc := &spyCompanySvc{listErr: errors.New("db error")}
 	h := NewHandler(svc, nil)

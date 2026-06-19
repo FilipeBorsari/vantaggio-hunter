@@ -21,9 +21,9 @@ func NewPostgresRepository(db *pgxpool.Pool) Repository {
 	return &postgresRepo{db: db}
 }
 
-func buildWhere(f Filters) (clause string, args []any) {
+func buildWhere(f Filters, startN int) (clause string, args []any) {
 	var conds []string
-	n := 1
+	n := startN
 
 	if f.UF != "" {
 		conds = append(conds, fmt.Sprintf("c.uf=$%d", n))
@@ -61,10 +61,21 @@ func buildWhere(f Filters) (clause string, args []any) {
 }
 
 func (r *postgresRepo) Count(ctx context.Context, f Filters) (int, error) {
-	where, args := buildWhere(f)
+	where, filterArgs := buildWhere(f, 2)
+	args := append([]any{f.OrgID}, filterArgs...)
 	var total int
 	err := r.db.QueryRow(ctx,
-		fmt.Sprintf(`SELECT COUNT(*) FROM tb_companies c %s`, where),
+		fmt.Sprintf(`
+			WITH org_leads AS (
+				SELECT DISTINCT sr.cnpj
+				FROM tb_search_results sr
+				JOIN tb_searches s ON s.id = sr.search_id
+				WHERE s.org_id = $1 AND s.status = 'done'
+			)
+			SELECT COUNT(*)
+			FROM tb_companies c
+			JOIN org_leads ol ON ol.cnpj = c.cnpj
+			%s`, where),
 		args...,
 	).Scan(&total)
 	if err != nil {
@@ -74,14 +85,22 @@ func (r *postgresRepo) Count(ctx context.Context, f Filters) (int, error) {
 }
 
 func (r *postgresRepo) List(ctx context.Context, f Filters) ([]domain.Company, error) {
-	where, args := buildWhere(f)
-	n := len(args) + 1
+	where, filterArgs := buildWhere(f, 2)
+	n := len(filterArgs) + 2
 	offset := (f.Page - 1) * f.Limit
+	args := append([]any{f.OrgID}, filterArgs...)
 	args = append(args, f.Limit, offset)
 	q := fmt.Sprintf(`
+		WITH org_leads AS (
+			SELECT DISTINCT sr.cnpj
+			FROM tb_search_results sr
+			JOIN tb_searches s ON s.id = sr.search_id
+			WHERE s.org_id = $1 AND s.status = 'done'
+		)
 		SELECT c.cnpj, c.razao_social, c.nome_fantasia, c.municipio_nome, c.uf,
 		       c.capital_social, c.situacao_cadastral
 		FROM tb_companies c
+		JOIN org_leads ol ON ol.cnpj = c.cnpj
 		%s
 		ORDER BY c.razao_social
 		LIMIT $%d OFFSET $%d`, where, n, n+1)

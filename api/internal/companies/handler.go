@@ -26,8 +26,10 @@ func NewHandler(svc ServiceInterface, creditSvc credits.ServiceInterface) *Handl
 }
 
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
+	orgID, _ := r.Context().Value(authpkg.ContextKeyOrgID).(string)
 	q := r.URL.Query()
 	f := Filters{
+		OrgID: orgID,
 		UF:    q.Get("uf"),
 		City:  q.Get("city"),
 		Page:  intParam(q.Get("page"), 1),

@@ -8,6 +8,7 @@ import (
 )
 
 type Filters struct {
+	OrgID      string
 	CNAEs      []string
 	UF         string
 	City       string
