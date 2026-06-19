@@ -12,6 +12,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	authpkg "github.com/vantaggio/prospect-api/internal/auth"
 	"github.com/vantaggio/prospect-api/internal/domain"
+	"github.com/vantaggio/prospect-api/pkg/brazil"
 	"github.com/vantaggio/prospect-api/pkg/httputil"
 )
 
@@ -110,6 +111,10 @@ func (h *Handler) CreateExport(w http.ResponseWriter, r *http.Request) {
 	if len(req.CNPJs) > 500 {
 		httputil.Error(w, http.StatusBadRequest, "máximo de 500 CNPJs por exportação")
 		return
+	}
+
+	for i, cnpj := range req.CNPJs {
+		req.CNPJs[i] = brazil.NormalizeCNPJ(cnpj)
 	}
 
 	job, err := h.svc.CreateExport(r.Context(), orgID, userID, req.SearchID, req.CNPJs)

@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	authpkg "github.com/vantaggio/prospect-api/internal/auth"
+	"github.com/vantaggio/prospect-api/pkg/brazil"
 	"github.com/vantaggio/prospect-api/pkg/httputil"
 )
 
@@ -21,7 +22,7 @@ func NewHandler(svc ServiceInterface) *Handler {
 func (h *Handler) Qualify(w http.ResponseWriter, r *http.Request) {
 	orgID, _ := r.Context().Value(authpkg.ContextKeyOrgID).(string)
 	userID, _ := r.Context().Value(authpkg.ContextKeyUserID).(string)
-	cnpj := chi.URLParam(r, "cnpj")
+	cnpj := brazil.NormalizeCNPJ(chi.URLParam(r, "cnpj"))
 
 	if len(cnpj) != 14 {
 		httputil.Error(w, http.StatusBadRequest, "CNPJ deve ter 14 dígitos")
@@ -53,7 +54,7 @@ func (h *Handler) ListQualifications(w http.ResponseWriter, r *http.Request) {
 	orgID, _ := r.Context().Value(authpkg.ContextKeyOrgID).(string)
 
 	var cnpj *string
-	if q := r.URL.Query().Get("cnpj"); q != "" {
+	if q := brazil.NormalizeCNPJ(r.URL.Query().Get("cnpj")); q != "" {
 		cnpj = &q
 	}
 

@@ -12,7 +12,11 @@
       "Bash(sudo systemctl start docker)",
       "Bash(/home/filipeborsari/go/bin/go test *)",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000/)",
-      "Bash(make:*)", "Bash(go:*)", "Read(*)", "Edit(*)"
+      "Bash(make:*)",
+      "Bash(go:*)",
+      "Read(*)",
+      "Edit(*)",
+      "Bash(npx eslint *)"
     ]
   }
 }

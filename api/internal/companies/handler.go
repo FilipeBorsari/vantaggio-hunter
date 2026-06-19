@@ -12,6 +12,7 @@ import (
 	authpkg "github.com/vantaggio/prospect-api/internal/auth"
 	"github.com/vantaggio/prospect-api/internal/credits"
 	"github.com/vantaggio/prospect-api/internal/domain"
+	"github.com/vantaggio/prospect-api/pkg/brazil"
 	"github.com/vantaggio/prospect-api/pkg/httputil"
 )
 
@@ -37,7 +38,7 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	}
 	if cnae := q.Get("cnae"); cnae != "" {
 		for _, c := range strings.Split(cnae, ",") {
-			if c = strings.TrimSpace(c); c != "" {
+			if c = brazil.NormalizeCNAE(strings.TrimSpace(c)); c != "" {
 				f.CNAEs = append(f.CNAEs, c)
 			}
 		}
@@ -62,7 +63,7 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) GetByCNPJ(w http.ResponseWriter, r *http.Request) {
-	cnpj := chi.URLParam(r, "cnpj")
+	cnpj := brazil.NormalizeCNPJ(chi.URLParam(r, "cnpj"))
 	orgID, _ := r.Context().Value(authpkg.ContextKeyOrgID).(string)
 	userID, _ := r.Context().Value(authpkg.ContextKeyUserID).(string)
 

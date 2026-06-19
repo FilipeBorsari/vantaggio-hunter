@@ -18,6 +18,8 @@ import (
 	"github.com/vantaggio/prospect-api/internal/credits"
 	"github.com/vantaggio/prospect-api/internal/exports"
 	"github.com/vantaggio/prospect-api/internal/ia"
+	"github.com/vantaggio/prospect-api/internal/invitations"
+	"github.com/vantaggio/prospect-api/internal/orgadmin"
 	"github.com/vantaggio/prospect-api/internal/searches"
 	"github.com/vantaggio/prospect-api/pkg/db"
 	"github.com/vantaggio/prospect-api/pkg/httputil"
@@ -47,13 +49,13 @@ func main() {
 	authSvc := authpkg.NewService(authRepo)
 	authHandler := authpkg.NewHandler(authSvc)
 
-	adminRepo := admin.NewPostgresRepository(pool)
-	adminSvc := admin.NewService(adminRepo)
-	adminHandler := admin.NewHandler(adminSvc)
-
 	creditsRepo := credits.NewPostgresRepository(pool)
 	creditsSvc := credits.NewService(creditsRepo)
 	creditsHandler := credits.NewHandler(creditsSvc)
+
+	adminRepo := admin.NewPostgresRepository(pool)
+	adminSvc := admin.NewService(adminRepo, creditsSvc)
+	adminHandler := admin.NewHandler(adminSvc)
 
 	companiesRepo := companies.NewPostgresRepository(pool)
 	companiesSvc := companies.NewService(companiesRepo)
@@ -79,6 +81,14 @@ func main() {
 	iaRepo := ia.NewPostgresRepository(pool)
 	iaSvc := ia.NewService(iaRepo, creditsSvc, iaProvider)
 	iaHandler := ia.NewHandler(iaSvc)
+
+	orgadminRepo := orgadmin.NewPostgresRepository(pool)
+	orgadminSvc := orgadmin.NewService(orgadminRepo, creditsSvc)
+	orgadminHandler := orgadmin.NewHandler(orgadminSvc)
+
+	invitationsRepo := invitations.NewPostgresRepository(pool)
+	invitationsSvc := invitations.NewService(invitationsRepo, authSvc)
+	invitationsHandler := invitations.NewHandler(invitationsSvc)
 
 	// Start ETL job
 	go analytics.StartETLJob(ctx, analyticsSvc)
@@ -108,6 +118,10 @@ func main() {
 	r.Post("/auth/login", authHandler.Login)
 	r.Post("/auth/refresh", authHandler.Refresh)
 
+	// Public: invitation accept flow
+	r.Get("/invitations/{token}", invitationsHandler.ValidateToken)
+	r.Post("/invitations/{token}/accept", invitationsHandler.Accept)
+
 	r.Group(func(r chi.Router) {
 		r.Use(authpkg.Authenticate)
 
@@ -119,6 +133,7 @@ func main() {
 		r.Get("/cnaes", searchesHandler.SearchCNAEs)
 
 		r.Post("/searches", searchesHandler.Create)
+		r.Post("/searches/estimate", searchesHandler.Estimate)
 		r.Get("/searches", searchesHandler.List)
 		r.Get("/searches/{id}", searchesHandler.GetByID)
 
@@ -139,11 +154,38 @@ func main() {
 		r.Get("/exports", exportsHandler.ListExports)
 		r.Get("/exports/{id}", exportsHandler.GetExport)
 
+		// Seller: own profile and searches
+		r.Get("/me/profile", orgadminHandler.GetProfile)
+		r.Patch("/me/profile", orgadminHandler.UpdateProfile)
+		r.Get("/me/searches", orgadminHandler.ListSellerSearches)
+
+		// Org admin routes
 		r.Group(func(r chi.Router) {
-			r.Use(authpkg.RequireRole("admin"))
+			r.Use(authpkg.RequireOrgAdmin())
+			r.Get("/org/users", orgadminHandler.ListUsers)
+			r.Patch("/org/users/{userId}", orgadminHandler.PatchUser)
+			r.Delete("/org/users/{userId}", orgadminHandler.DeleteUser)
+			r.Get("/org/users/{userId}/history", orgadminHandler.GetUserHistory)
+			r.Post("/org/invitations", orgadminHandler.CreateInvitation)
+			r.Get("/org/invitations", orgadminHandler.ListInvitations)
+			r.Delete("/org/invitations/{invitationId}", orgadminHandler.DeleteInvitation)
+			r.Get("/org/costs", orgadminHandler.GetOrgCosts)
+			r.Get("/org/credits", orgadminHandler.GetOrgCredits)
+		})
+
+		// Super admin routes
+		r.Group(func(r chi.Router) {
+			r.Use(authpkg.RequireSuperAdmin())
 			r.Get("/admin/plans", adminHandler.ListPlans)
 			r.Get("/admin/organizations", adminHandler.ListOrgs)
 			r.Post("/admin/organizations", adminHandler.CreateOrg)
+			r.Get("/admin/organizations/{orgId}", adminHandler.GetOrgDetail)
+			r.Patch("/admin/organizations/{orgId}", adminHandler.PatchOrg)
+			r.Post("/admin/organizations/{orgId}/users", adminHandler.CreateUser)
+			r.Post("/admin/organizations/{orgId}/credits", adminHandler.AddOrgCredits)
+			r.Post("/admin/organizations/{orgId}/impersonate", adminHandler.Impersonate)
+			r.Get("/admin/dashboard", adminHandler.GetDashboard)
+			// Legacy compat routes
 			r.Post("/admin/organizations/{id}/users", adminHandler.CreateUser)
 			r.Patch("/admin/organizations/{id}/users/{userId}", adminHandler.SetUserActive)
 			r.Post("/admin/credits/add", creditsHandler.AdminAddCredits)
@@ -169,7 +211,6 @@ func workerConcurrency() int {
 	return n
 }
 
-// loadEncryptionKey decodes ENCRYPTION_KEY (base64, must be 32 bytes after decoding).
 func loadEncryptionKey() []byte {
 	raw := os.Getenv("ENCRYPTION_KEY")
 	if raw == "" {
@@ -184,4 +225,3 @@ func loadEncryptionKey() []byte {
 	}
 	return key
 }
-
