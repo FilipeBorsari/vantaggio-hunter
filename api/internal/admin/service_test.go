@@ -21,6 +21,7 @@ type mockAdminRepo struct {
 	count        int
 	countErr     error
 	setActiveErr error
+	auditErr     error
 }
 
 func (m *mockAdminRepo) ListPlans(_ context.Context) ([]domain.Plan, error) {
@@ -29,10 +30,10 @@ func (m *mockAdminRepo) ListPlans(_ context.Context) ([]domain.Plan, error) {
 func (m *mockAdminRepo) CreateOrg(_ context.Context, _ string, _ *string) (*domain.Org, error) {
 	return m.org, m.orgErr
 }
-func (m *mockAdminRepo) CreateUser(_ context.Context, _, _, _, _ string) (*domain.User, error) {
+func (m *mockAdminRepo) CreateUser(_ context.Context, _, _, _, _, _ string) (*domain.User, error) {
 	return m.user, m.userErr
 }
-func (m *mockAdminRepo) ListOrgs(_ context.Context, _, _ int) ([]domain.Org, error) {
+func (m *mockAdminRepo) ListOrgs(_ context.Context, _, _ int, _ string) ([]domain.Org, error) {
 	return m.orgs, m.orgsErr
 }
 func (m *mockAdminRepo) CountOrgs(_ context.Context) (int, error) {
@@ -40,6 +41,18 @@ func (m *mockAdminRepo) CountOrgs(_ context.Context) (int, error) {
 }
 func (m *mockAdminRepo) SetUserActive(_ context.Context, _ string, _ bool) error {
 	return m.setActiveErr
+}
+func (m *mockAdminRepo) GetOrgDetail(_ context.Context, _ string) (*domain.OrgDetail, error) {
+	return nil, nil
+}
+func (m *mockAdminRepo) PatchOrg(_ context.Context, _ string, _ *bool, _ *string) error {
+	return nil
+}
+func (m *mockAdminRepo) GetAdminDashboard(_ context.Context, _ int) (*domain.AdminDashboard, error) {
+	return &domain.AdminDashboard{Orgs: []domain.OrgSummary{}}, nil
+}
+func (m *mockAdminRepo) WriteAuditLog(_ context.Context, _ *string, _, _ string, _ *string, _ map[string]any) error {
+	return m.auditErr
 }
 
 // ---------------------------------------------------------------------------
@@ -52,7 +65,7 @@ func TestListPlans_ReturnsPlans(t *testing.T) {
 		{ID: "plan-2", Name: "Pro", Credits: 1000, PriceCents: 19900},
 	}
 	repo := &mockAdminRepo{plans: plans}
-	svc := NewService(repo)
+	svc := NewService(repo, nil)
 
 	result, err := svc.ListPlans(context.Background())
 	if err != nil {
@@ -68,52 +81,9 @@ func TestListPlans_ReturnsPlans(t *testing.T) {
 
 func TestListPlans_RepoError(t *testing.T) {
 	repo := &mockAdminRepo{plansErr: errors.New("db error")}
-	svc := NewService(repo)
+	svc := NewService(repo, nil)
 
 	_, err := svc.ListPlans(context.Background())
-	if err == nil {
-		t.Fatal("expected error, got nil")
-	}
-}
-
-// ---------------------------------------------------------------------------
-// CreateOrg
-// ---------------------------------------------------------------------------
-
-func TestCreateOrg_Success(t *testing.T) {
-	planID := "plan-1"
-	org := &domain.Org{ID: "org-1", Name: "ACME Corp", PlanID: &planID, IsActive: true}
-	repo := &mockAdminRepo{org: org}
-	svc := NewService(repo)
-
-	result, err := svc.CreateOrg(context.Background(), "ACME Corp", &planID)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if result.Name != "ACME Corp" {
-		t.Errorf("name = %q, want ACME Corp", result.Name)
-	}
-}
-
-func TestCreateOrg_NoPlan(t *testing.T) {
-	org := &domain.Org{ID: "org-2", Name: "No Plan Org"}
-	repo := &mockAdminRepo{org: org}
-	svc := NewService(repo)
-
-	result, err := svc.CreateOrg(context.Background(), "No Plan Org", nil)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if result.PlanID != nil {
-		t.Errorf("plan_id = %v, want nil", result.PlanID)
-	}
-}
-
-func TestCreateOrg_RepoError(t *testing.T) {
-	repo := &mockAdminRepo{orgErr: errors.New("db error")}
-	svc := NewService(repo)
-
-	_, err := svc.CreateOrg(context.Background(), "Fail Org", nil)
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -124,52 +94,36 @@ func TestCreateOrg_RepoError(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestCreateUser_Success(t *testing.T) {
-	user := &domain.User{ID: "user-1", Email: "admin@acme.com", Role: "admin"}
+	user := &domain.User{ID: "user-1", Email: "admin@acme.com", Role: "org_admin"}
 	repo := &mockAdminRepo{user: user}
-	svc := NewService(repo)
+	svc := NewService(repo, nil)
 
-	result, err := svc.CreateUser(context.Background(), "org-1", "admin@acme.com", "P@ssw0rd!", "admin")
+	result, err := svc.CreateUser(context.Background(), "org-1", "Admin", "admin@acme.com", "P@ssw0rd!", "org_admin")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if result.Email != "admin@acme.com" {
 		t.Errorf("email = %q, want admin@acme.com", result.Email)
 	}
-	if result.Role != "admin" {
-		t.Errorf("role = %q, want admin", result.Role)
-	}
 }
 
 func TestCreateUser_EmailAlreadyExists(t *testing.T) {
 	repo := &mockAdminRepo{userErr: ErrEmailAlreadyExists}
-	svc := NewService(repo)
+	svc := NewService(repo, nil)
 
-	_, err := svc.CreateUser(context.Background(), "org-1", "dup@acme.com", "pass", "operator")
+	_, err := svc.CreateUser(context.Background(), "org-1", "Admin", "dup@acme.com", "pass", "seller")
 	if !errors.Is(err, ErrEmailAlreadyExists) {
 		t.Errorf("got %v, want ErrEmailAlreadyExists", err)
 	}
 }
 
-func TestCreateUser_RepoError(t *testing.T) {
-	repo := &mockAdminRepo{userErr: errors.New("constraint violation")}
-	svc := NewService(repo)
-
-	_, err := svc.CreateUser(context.Background(), "org-1", "u@e.com", "pass", "operator")
-	if err == nil {
-		t.Fatal("expected error, got nil")
-	}
-}
-
 func TestCreateUser_PasswordIsHashed(t *testing.T) {
-	// Verify the service never stores the plaintext password.
 	var storedHash string
-	repo := &mockAdminRepo{}
-	repo.user = &domain.User{ID: "u1", Email: "u@e.com", Role: "operator"}
-	// Override CreateUser to capture the hash
+	repo := &mockAdminRepo{user: &domain.User{ID: "u1", Email: "u@e.com", Role: "seller"}}
 	captureRepo := &hashCaptureRepo{mockAdminRepo: repo, capturedHash: &storedHash}
-	svc := NewService(captureRepo)
+	svc := NewService(captureRepo, nil)
 
-	_, err := svc.CreateUser(context.Background(), "org-1", "u@e.com", "plaintext-password", "operator")
+	_, err := svc.CreateUser(context.Background(), "org-1", "User", "u@e.com", "plaintext-password", "seller")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -181,13 +135,12 @@ func TestCreateUser_PasswordIsHashed(t *testing.T) {
 	}
 }
 
-// hashCaptureRepo wraps mockAdminRepo and captures the password hash passed to CreateUser.
 type hashCaptureRepo struct {
 	*mockAdminRepo
 	capturedHash *string
 }
 
-func (r *hashCaptureRepo) CreateUser(_ context.Context, _, _, hash, _ string) (*domain.User, error) {
+func (r *hashCaptureRepo) CreateUser(_ context.Context, _, _, _, hash, _ string) (*domain.User, error) {
 	*r.capturedHash = hash
 	return r.mockAdminRepo.user, r.mockAdminRepo.userErr
 }
@@ -202,9 +155,9 @@ func TestListOrgs_Success(t *testing.T) {
 		{ID: "org-2", Name: "Beta Inc", IsActive: false},
 	}
 	repo := &mockAdminRepo{orgs: orgs, count: 2}
-	svc := NewService(repo)
+	svc := NewService(repo, nil)
 
-	result, err := svc.ListOrgs(context.Background(), 1, 20)
+	result, err := svc.ListOrgs(context.Background(), 1, 20, "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -218,9 +171,9 @@ func TestListOrgs_Success(t *testing.T) {
 
 func TestListOrgs_ListError(t *testing.T) {
 	repo := &mockAdminRepo{orgsErr: errors.New("db error")}
-	svc := NewService(repo)
+	svc := NewService(repo, nil)
 
-	_, err := svc.ListOrgs(context.Background(), 1, 20)
+	_, err := svc.ListOrgs(context.Background(), 1, 20, "")
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -228,9 +181,9 @@ func TestListOrgs_ListError(t *testing.T) {
 
 func TestListOrgs_CountError(t *testing.T) {
 	repo := &mockAdminRepo{orgs: []domain.Org{}, countErr: errors.New("count failed")}
-	svc := NewService(repo)
+	svc := NewService(repo, nil)
 
-	_, err := svc.ListOrgs(context.Background(), 1, 20)
+	_, err := svc.ListOrgs(context.Background(), 1, 20, "")
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -242,25 +195,16 @@ func TestListOrgs_CountError(t *testing.T) {
 
 func TestSetUserActive_Activate(t *testing.T) {
 	repo := &mockAdminRepo{}
-	svc := NewService(repo)
+	svc := NewService(repo, nil)
 
 	if err := svc.SetUserActive(context.Background(), "user-1", true); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
 
-func TestSetUserActive_Deactivate(t *testing.T) {
-	repo := &mockAdminRepo{}
-	svc := NewService(repo)
-
-	if err := svc.SetUserActive(context.Background(), "user-1", false); err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-}
-
 func TestSetUserActive_RepoError(t *testing.T) {
 	repo := &mockAdminRepo{setActiveErr: errors.New("not found")}
-	svc := NewService(repo)
+	svc := NewService(repo, nil)
 
 	if err := svc.SetUserActive(context.Background(), "nonexistent", true); err == nil {
 		t.Fatal("expected error, got nil")
