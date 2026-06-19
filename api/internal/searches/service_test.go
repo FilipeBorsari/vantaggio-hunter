@@ -11,16 +11,19 @@ import (
 
 // mockRepo implements searches.Repository for testing.
 type mockRepo struct {
-	createFn            func(ctx context.Context, s *domain.Search) error
-	getByIDFn           func(ctx context.Context, id, orgID string) (*domain.Search, error)
-	getByIDForWorkerFn  func(ctx context.Context, id string) (*domain.Search, error)
-	listFn              func(ctx context.Context, orgID string, page, limit int) ([]domain.Search, int, error)
-	updateStatusFn      func(ctx context.Context, id string, status domain.SearchStatus, resultCount *int, errMsg *string) error
-	runStructuredFn        func(ctx context.Context, searchID string, f domain.SearchFilters) (int, error)
-	runSemanticFn          func(ctx context.Context, searchID string, f domain.SearchFilters, vec []float32) (int, error)
-	getResultsFn           func(ctx context.Context, searchID string, page, limit int) ([]domain.SearchResult, int, error)
-	searchCNAEsFn          func(ctx context.Context, q string) ([]domain.CNAE, error)
-	recoverStaleSearchesFn func(ctx context.Context, staleMinutes int) (int64, error)
+	createFn                func(ctx context.Context, s *domain.Search) error
+	getByIDFn               func(ctx context.Context, id, orgID string) (*domain.Search, error)
+	getByIDForWorkerFn      func(ctx context.Context, id string) (*domain.Search, error)
+	listFn                  func(ctx context.Context, orgID string, page, limit int) ([]domain.Search, int, error)
+	updateStatusFn          func(ctx context.Context, id string, status domain.SearchStatus, resultCount *int, errMsg *string) error
+	runStructuredFn         func(ctx context.Context, searchID string, f domain.SearchFilters) (int, error)
+	runSemanticFn           func(ctx context.Context, searchID string, f domain.SearchFilters, vec []float32, queryText string) (int, error)
+	getResultsFn            func(ctx context.Context, searchID string, page, limit int) ([]domain.SearchResult, int, error)
+	searchCNAEsFn           func(ctx context.Context, q string) ([]domain.CNAE, error)
+	recoverStaleSearchesFn  func(ctx context.Context, staleMinutes int) (int64, error)
+	listQueuedSearchIDsFn      func(ctx context.Context) ([]string, error)
+	getCompanyEmbedInputsFn    func(ctx context.Context, searchID string, limit int) ([]domain.CompanyEmbedInput, error)
+	saveEmbeddingsFn           func(ctx context.Context, embeddings []domain.CompanyEmbedding) error
 }
 
 func (m *mockRepo) Create(ctx context.Context, s *domain.Search) error {
@@ -41,8 +44,8 @@ func (m *mockRepo) UpdateStatus(ctx context.Context, id string, status domain.Se
 func (m *mockRepo) RunStructuredSearch(ctx context.Context, searchID string, f domain.SearchFilters) (int, error) {
 	return m.runStructuredFn(ctx, searchID, f)
 }
-func (m *mockRepo) RunSemanticSearch(ctx context.Context, searchID string, f domain.SearchFilters, vec []float32) (int, error) {
-	return m.runSemanticFn(ctx, searchID, f, vec)
+func (m *mockRepo) RunSemanticSearch(ctx context.Context, searchID string, f domain.SearchFilters, vec []float32, queryText string) (int, error) {
+	return m.runSemanticFn(ctx, searchID, f, vec, queryText)
 }
 func (m *mockRepo) GetResults(ctx context.Context, searchID string, page, limit int) ([]domain.SearchResult, int, error) {
 	return m.getResultsFn(ctx, searchID, page, limit)
@@ -55,6 +58,24 @@ func (m *mockRepo) RecoverStaleSearches(ctx context.Context, staleMinutes int) (
 		return m.recoverStaleSearchesFn(ctx, staleMinutes)
 	}
 	return 0, nil
+}
+func (m *mockRepo) ListQueuedSearchIDs(ctx context.Context) ([]string, error) {
+	if m.listQueuedSearchIDsFn != nil {
+		return m.listQueuedSearchIDsFn(ctx)
+	}
+	return nil, nil
+}
+func (m *mockRepo) GetCompanyEmbedInputs(ctx context.Context, searchID string, limit int) ([]domain.CompanyEmbedInput, error) {
+	if m.getCompanyEmbedInputsFn != nil {
+		return m.getCompanyEmbedInputsFn(ctx, searchID, limit)
+	}
+	return nil, nil
+}
+func (m *mockRepo) SaveEmbeddings(ctx context.Context, embeddings []domain.CompanyEmbedding) error {
+	if m.saveEmbeddingsFn != nil {
+		return m.saveEmbeddingsFn(ctx, embeddings)
+	}
+	return nil
 }
 
 func TestService_Create_Structured_OK(t *testing.T) {

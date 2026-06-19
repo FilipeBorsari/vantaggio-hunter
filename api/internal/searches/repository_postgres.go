@@ -7,10 +7,12 @@ import (
 	"fmt"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/vantaggio/prospect-api/internal/domain"
+	"github.com/vantaggio/prospect-api/pkg/brazil"
 )
 
 type postgresRepo struct {
@@ -140,9 +142,9 @@ func (r *postgresRepo) UpdateStatus(ctx context.Context, id string, status domai
 	_, err := r.db.Exec(ctx,
 		`UPDATE tb_searches
 		 SET status=$1, result_count=$2, error_msg=$3,
-		     done_at=CASE WHEN $1 IN ('done','failed') THEN now() ELSE done_at END
+		     done_at=CASE WHEN $5 IN ('done','failed') THEN now() ELSE done_at END
 		 WHERE id=$4`,
-		status, resultCount, errMsg, id,
+		status, resultCount, errMsg, id, string(status),
 	)
 	if err != nil {
 		return fmt.Errorf("update search status: %w", err)
@@ -162,6 +164,24 @@ func (r *postgresRepo) RecoverStaleSearches(ctx context.Context, staleMinutes in
 		return 0, fmt.Errorf("recover stale searches: %w", err)
 	}
 	return tag.RowsAffected(), nil
+}
+
+func (r *postgresRepo) ListQueuedSearchIDs(ctx context.Context) ([]string, error) {
+	rows, err := r.db.Query(ctx, `SELECT id FROM tb_searches WHERE status = 'queued'`)
+	if err != nil {
+		return nil, fmt.Errorf("list queued searches: %w", err)
+	}
+	defer rows.Close()
+
+	var ids []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, fmt.Errorf("scan queued search id: %w", err)
+		}
+		ids = append(ids, id)
+	}
+	return ids, rows.Err()
 }
 
 func (r *postgresRepo) RunStructuredSearch(ctx context.Context, searchID string, f domain.SearchFilters) (int, error) {
@@ -204,7 +224,7 @@ func (r *postgresRepo) RunStructuredSearch(ctx context.Context, searchID string,
 	}
 
 	q := fmt.Sprintf(`
-		SELECT c.cnpj
+		SELECT DISTINCT c.cnpj
 		FROM tb_companies c
 		%s
 		ORDER BY c.cnpj
@@ -242,17 +262,33 @@ func (r *postgresRepo) RunStructuredSearch(ctx context.Context, searchID string,
 	return len(copyRows), nil
 }
 
-func (r *postgresRepo) RunSemanticSearch(ctx context.Context, searchID string, f domain.SearchFilters, queryVec []float32) (int, error) {
+func (r *postgresRepo) RunSemanticSearch(ctx context.Context, searchID string, f domain.SearchFilters, queryVec []float32, queryText string) (int, error) {
+	count, err := r.runVectorSearch(ctx, searchID, f, queryVec)
+	if err != nil {
+		return 0, err
+	}
+	if count > 0 {
+		return count, nil
+	}
+	// Fallback: nenhuma empresa tem embedding ainda — usa full-text search em razao_social.
+	return r.runTextFallback(ctx, searchID, f, queryText)
+}
+
+func (r *postgresRepo) runVectorSearch(ctx context.Context, searchID string, f domain.SearchFilters, queryVec []float32) (int, error) {
 	var conds []string
 	args := []any{vectorLiteral(queryVec)} // $1 = embedding vector
 	n := 2
 
 	conds = append(conds, "c.embedding IS NOT NULL")
-	conds = append(conds, "c.situacao_cadastral = 2")
 
 	if f.UF != nil && *f.UF != "" {
 		conds = append(conds, fmt.Sprintf(`c.uf=$%d`, n))
 		args = append(args, strings.ToUpper(*f.UF))
+		n++
+	}
+	if f.Status != nil {
+		conds = append(conds, fmt.Sprintf(`c.situacao_cadastral=$%d`, n))
+		args = append(args, *f.Status)
 		n++
 	}
 	_ = n
@@ -294,6 +330,107 @@ func (r *postgresRepo) RunSemanticSearch(ctx context.Context, searchID string, f
 			pgx.CopyFromRows(copyRows),
 		); err != nil {
 			return 0, fmt.Errorf("save semantic results: %w", err)
+		}
+	}
+	return len(copyRows), nil
+}
+
+// ptSearchStopWords are words too generic to be useful when matching against company names.
+var ptSearchStopWords = map[string]bool{
+	"para": true, "como": true, "mais": true, "menos": true, "muito": true, "pouco": true,
+	"todos": true, "todas": true, "este": true, "esta": true, "esse": true, "essa": true,
+	"isso": true, "outro": true, "outra": true,
+	"empresa": true, "empresas": true, "negocio": true, "negocios": true, "ramo": true,
+	"setor": true, "area": true, "segmento": true, "tipo": true,
+	"servico": true, "servicos": true, "produto": true, "produtos": true,
+	"cliente": true, "clientes": true, "mercado": true, "atividade": true, "atividades": true,
+}
+
+// extractKeywords returns meaningful words from a natural-language query for ILIKE matching.
+// Words shorter than 5 characters or in the stop-word list are excluded.
+func extractKeywords(text string) []string {
+	seen := make(map[string]bool)
+	var result []string
+	for _, w := range strings.FieldsFunc(strings.ToLower(text), func(r rune) bool {
+		return !unicode.IsLetter(r) && !unicode.IsDigit(r)
+	}) {
+		if len([]rune(w)) >= 5 && !ptSearchStopWords[w] && !seen[w] {
+			seen[w] = true
+			result = append(result, w)
+		}
+	}
+	return result
+}
+
+func (r *postgresRepo) runTextFallback(ctx context.Context, searchID string, f domain.SearchFilters, queryText string) (int, error) {
+	var conds []string
+	var args []any
+	n := 1
+
+	// Use OR-based keyword matching so natural language descriptions like
+	// "empresas do ramo de energia solar" match companies whose razao_social or
+	// nome_fantasia contains any of the meaningful terms ("energia", "solar", …).
+	keywords := extractKeywords(queryText)
+	if len(keywords) == 0 {
+		return 0, nil
+	}
+	var orParts []string
+	for _, kw := range keywords {
+		orParts = append(orParts, fmt.Sprintf(
+			`(c.razao_social ILIKE '%%' || $%d || '%%' OR c.nome_fantasia ILIKE '%%' || $%d || '%%')`, n, n,
+		))
+		args = append(args, kw)
+		n++
+	}
+	conds = append(conds, "("+strings.Join(orParts, " OR ")+")")
+
+	if f.UF != nil && *f.UF != "" {
+		conds = append(conds, fmt.Sprintf(`c.uf=$%d`, n))
+		args = append(args, strings.ToUpper(*f.UF))
+		n++
+	}
+	if f.Status != nil {
+		conds = append(conds, fmt.Sprintf(`c.situacao_cadastral=$%d`, n))
+		args = append(args, *f.Status)
+		n++
+	}
+	_ = n
+
+	where := "WHERE " + strings.Join(conds, " AND ")
+
+	q := fmt.Sprintf(`
+		SELECT DISTINCT c.cnpj
+		FROM tb_companies c
+		%s
+		LIMIT 10000`, where)
+
+	rows, err := r.db.Query(ctx, q, args...)
+	if err != nil {
+		return 0, fmt.Errorf("text fallback query: %w", err)
+	}
+	defer rows.Close()
+
+	var copyRows [][]any
+	pos := 0
+	for rows.Next() {
+		var cnpj string
+		if err := rows.Scan(&cnpj); err != nil {
+			return 0, fmt.Errorf("scan text fallback result: %w", err)
+		}
+		copyRows = append(copyRows, []any{searchID, cnpj, nil, pos})
+		pos++
+	}
+	if err := rows.Err(); err != nil {
+		return 0, fmt.Errorf("rows error: %w", err)
+	}
+
+	if len(copyRows) > 0 {
+		if _, err := r.db.CopyFrom(ctx,
+			pgx.Identifier{"tb_search_results"},
+			[]string{"search_id", "cnpj", "score", "position"},
+			pgx.CopyFromRows(copyRows),
+		); err != nil {
+			return 0, fmt.Errorf("save text fallback results: %w", err)
 		}
 	}
 	return len(copyRows), nil
@@ -355,11 +492,15 @@ func (r *postgresRepo) GetResults(ctx context.Context, searchID string, page, li
 }
 
 func (r *postgresRepo) SearchCNAEs(ctx context.Context, q string) ([]domain.CNAE, error) {
+	codePattern := brazil.NormalizeCNAE(q)
+	if codePattern == "" {
+		codePattern = q
+	}
 	rows, err := r.db.Query(ctx,
 		`SELECT code, description FROM tb_cnaes
-		 WHERE description ILIKE $1 OR code ILIKE $1
+		 WHERE description ILIKE $1 OR code ILIKE $2
 		 ORDER BY code LIMIT 20`,
-		"%"+q+"%",
+		"%"+q+"%", "%"+codePattern+"%",
 	)
 	if err != nil {
 		return nil, fmt.Errorf("search cnaes: %w", err)
@@ -381,6 +522,163 @@ func (r *postgresRepo) SearchCNAEs(ctx context.Context, q string) ([]domain.CNAE
 		cnaes = []domain.CNAE{}
 	}
 	return cnaes, nil
+}
+
+func (r *postgresRepo) GetCompanyEmbedInputs(ctx context.Context, searchID string, limit int) ([]domain.CompanyEmbedInput, error) {
+	rows, err := r.db.Query(ctx, `
+		SELECT c.cnpj, c.uf,
+		       c.razao_social
+		       || ' | ' || coalesce(tc.description, '')
+		       || ' | ' || coalesce(c.municipio_nome, '') || ' ' || c.uf
+		       || ' | situacao:' || c.situacao_cadastral::text
+		       || ' capital:' || coalesce(c.capital_social::text, '0')
+		FROM tb_search_results sr
+		JOIN tb_companies c ON c.cnpj = sr.cnpj
+		LEFT JOIN tb_company_cnaes cc ON cc.cnpj = c.cnpj AND cc.is_primary = true
+		LEFT JOIN tb_cnaes tc ON tc.code = cc.cnae_code
+		WHERE sr.search_id = $1 AND c.embedding IS NULL
+		LIMIT $2`,
+		searchID, limit,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get embed inputs: %w", err)
+	}
+	defer rows.Close()
+
+	var inputs []domain.CompanyEmbedInput
+	for rows.Next() {
+		var inp domain.CompanyEmbedInput
+		if err := rows.Scan(&inp.CNPJ, &inp.UF, &inp.Text); err != nil {
+			return nil, fmt.Errorf("scan embed input: %w", err)
+		}
+		inputs = append(inputs, inp)
+	}
+	return inputs, rows.Err()
+}
+
+func (r *postgresRepo) SaveEmbeddings(ctx context.Context, embeddings []domain.CompanyEmbedding) error {
+	if len(embeddings) == 0 {
+		return nil
+	}
+	batch := &pgx.Batch{}
+	for _, e := range embeddings {
+		batch.Queue(`
+			UPDATE tb_companies
+			SET embedding = $1::vector, embedding_updated_at = now()
+			WHERE cnpj = $2 AND uf = $3`,
+			vectorLiteral(e.Vector), e.CNPJ, e.UF,
+		)
+	}
+	results := r.db.SendBatch(ctx, batch)
+	defer results.Close()
+	for i := 0; i < batch.Len(); i++ {
+		if _, err := results.Exec(); err != nil {
+			return fmt.Errorf("save embedding: %w", err)
+		}
+	}
+	return nil
+}
+
+func (r *postgresRepo) EstimateCount(ctx context.Context, mode domain.SearchMode, f domain.SearchFilters, queryText string) (int, error) {
+	switch mode {
+	case domain.SearchModeStructured:
+		return r.countStructured(ctx, f)
+	case domain.SearchModeSemantic:
+		return r.countSemantic(ctx, f, queryText)
+	default:
+		return 0, fmt.Errorf("unknown mode: %s", mode)
+	}
+}
+
+func (r *postgresRepo) countStructured(ctx context.Context, f domain.SearchFilters) (int, error) {
+	var conds []string
+	var args []any
+	n := 1
+
+	if len(f.CNAEs) > 0 {
+		conds = append(conds, fmt.Sprintf(
+			`EXISTS (SELECT 1 FROM tb_company_cnaes cc WHERE cc.cnpj=c.cnpj AND cc.cnae_code=ANY($%d))`, n,
+		))
+		args = append(args, f.CNAEs)
+		n++
+	}
+	if f.UF != nil && *f.UF != "" {
+		conds = append(conds, fmt.Sprintf(`c.uf=$%d`, n))
+		args = append(args, strings.ToUpper(*f.UF))
+		n++
+	}
+	if f.City != nil && *f.City != "" {
+		conds = append(conds, fmt.Sprintf(`c.municipio_nome ILIKE $%d`, n))
+		args = append(args, "%"+*f.City+"%")
+		n++
+	}
+	if f.CapitalMin != nil {
+		conds = append(conds, fmt.Sprintf(`c.capital_social>=$%d`, n))
+		args = append(args, *f.CapitalMin)
+		n++
+	}
+	if f.Status != nil {
+		conds = append(conds, fmt.Sprintf(`c.situacao_cadastral=$%d`, n))
+		args = append(args, *f.Status)
+		n++
+	}
+	_ = n
+
+	where := ""
+	if len(conds) > 0 {
+		where = "WHERE " + strings.Join(conds, " AND ")
+	}
+
+	var count int
+	if err := r.db.QueryRow(ctx,
+		fmt.Sprintf(`SELECT COUNT(DISTINCT c.cnpj) FROM tb_companies c %s`, where),
+		args...,
+	).Scan(&count); err != nil {
+		return 0, fmt.Errorf("count structured: %w", err)
+	}
+	return count, nil
+}
+
+func (r *postgresRepo) countSemantic(ctx context.Context, f domain.SearchFilters, queryText string) (int, error) {
+	keywords := extractKeywords(queryText)
+	if len(keywords) == 0 {
+		return 0, nil
+	}
+
+	var conds []string
+	var args []any
+	n := 1
+
+	var orParts []string
+	for _, kw := range keywords {
+		orParts = append(orParts, fmt.Sprintf(
+			`(c.razao_social ILIKE '%%' || $%d || '%%' OR c.nome_fantasia ILIKE '%%' || $%d || '%%')`, n, n,
+		))
+		args = append(args, kw)
+		n++
+	}
+	conds = append(conds, "("+strings.Join(orParts, " OR ")+")")
+
+	if f.UF != nil && *f.UF != "" {
+		conds = append(conds, fmt.Sprintf(`c.uf=$%d`, n))
+		args = append(args, strings.ToUpper(*f.UF))
+		n++
+	}
+	if f.Status != nil {
+		conds = append(conds, fmt.Sprintf(`c.situacao_cadastral=$%d`, n))
+		args = append(args, *f.Status)
+		n++
+	}
+	_ = n
+
+	var count int
+	if err := r.db.QueryRow(ctx,
+		fmt.Sprintf(`SELECT COUNT(DISTINCT c.cnpj) FROM tb_companies c WHERE %s`, strings.Join(conds, " AND ")),
+		args...,
+	).Scan(&count); err != nil {
+		return 0, fmt.Errorf("count semantic: %w", err)
+	}
+	return count, nil
 }
 
 // vectorLiteral formats a float32 slice as pgvector text: "[v1,v2,...]"

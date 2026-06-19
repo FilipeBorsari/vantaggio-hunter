@@ -15,6 +15,7 @@ type ServiceInterface interface {
 	Get(ctx context.Context, id, orgID string, page, limit int) (*domain.SearchResponse, error)
 	List(ctx context.Context, orgID string, page, limit int) (*domain.SearchListResponse, error)
 	SearchCNAEs(ctx context.Context, q string) ([]domain.CNAE, error)
+	Estimate(ctx context.Context, mode domain.SearchMode, filters domain.SearchFilters, query string) (int, error)
 }
 
 type Service struct {
@@ -64,6 +65,7 @@ func (s *Service) Get(ctx context.Context, id, orgID string, page, limit int) (*
 		Mode:        search.Mode,
 		Status:      search.Status,
 		ResultCount: search.ResultCount,
+		ErrorMsg:    search.ErrorMsg,
 	}
 
 	if search.Status == domain.SearchStatusDone {
@@ -85,6 +87,14 @@ func (s *Service) List(ctx context.Context, orgID string, page, limit int) (*dom
 		return nil, fmt.Errorf("list searches: %w", err)
 	}
 	return &domain.SearchListResponse{Data: searches, Total: total}, nil
+}
+
+func (s *Service) Estimate(ctx context.Context, mode domain.SearchMode, filters domain.SearchFilters, query string) (int, error) {
+	count, err := s.repo.EstimateCount(ctx, mode, filters, query)
+	if err != nil {
+		return 0, fmt.Errorf("estimate count: %w", err)
+	}
+	return count, nil
 }
 
 func (s *Service) SearchCNAEs(ctx context.Context, q string) ([]domain.CNAE, error) {

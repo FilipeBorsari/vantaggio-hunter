@@ -84,12 +84,37 @@ func (w *Worker) recoverStale(ctx context.Context) {
 	if n > 0 {
 		slog.InfoContext(ctx, "worker: recovered stale searches", "count", n)
 	}
+
+	// Re-enqueue all searches that are queued in the DB but may have lost their
+	// Redis entry (e.g. after a server restart or stale recovery).
+	ids, err := w.repo.ListQueuedSearchIDs(ctx)
+	if err != nil {
+		slog.ErrorContext(ctx, "worker: list queued searches for requeue", "error", err)
+		return
+	}
+	if len(ids) == 0 {
+		return
+	}
+	args := make([]interface{}, len(ids))
+	for i, id := range ids {
+		args[i] = id
+	}
+	if err := w.queue.RPush(ctx, queueKey, args...).Err(); err != nil {
+		slog.ErrorContext(ctx, "worker: requeue searches", "error", err)
+		return
+	}
+	slog.InfoContext(ctx, "worker: requeued searches", "count", len(ids))
 }
 
 func (w *Worker) process(ctx context.Context, searchID string) error {
 	search, err := w.repo.GetByIDForWorker(ctx, searchID)
 	if err != nil {
 		return fmt.Errorf("get search: %w", err)
+	}
+
+	// Idempotency: skip if already completed (can happen when re-queuing on startup).
+	if search.Status == domain.SearchStatusDone || search.Status == domain.SearchStatusFailed {
+		return nil
 	}
 
 	procStatus := domain.SearchStatusProc
@@ -109,7 +134,14 @@ func (w *Worker) process(ctx context.Context, searchID string) error {
 	}
 
 	// Deduct credits atomically in a transaction.
+	// Structured searches are capped at 1 000 credits regardless of result size.
+	const maxStructuredCredits = 1000
 	if count > 0 && w.creditSvc != nil {
+		creditsToDeduct := count
+		if search.Mode == domain.SearchModeStructured && creditsToDeduct > maxStructuredCredits {
+			creditsToDeduct = maxStructuredCredits
+		}
+
 		tx, err := w.creditSvc.BeginTx(ctx)
 		if err != nil {
 			return fmt.Errorf("begin credit tx: %w", err)
@@ -117,7 +149,7 @@ func (w *Worker) process(ctx context.Context, searchID string) error {
 
 		refID := search.ID
 		deductErr := w.creditSvc.Deduct(ctx, tx, search.OrgID, search.UserID,
-			count,
+			creditsToDeduct,
 			domain.CreditTxSearch,
 			&refID,
 			fmt.Sprintf("Busca: %d leads retornados", count),
@@ -144,7 +176,48 @@ func (w *Worker) process(ctx context.Context, searchID string) error {
 		return fmt.Errorf("update to done: %w", err)
 	}
 	slog.InfoContext(ctx, "worker: search done", "search_id", searchID, "count", count, "mode", search.Mode)
+
+	if count > 0 {
+		go w.generateEmbeddingsForSearch(ctx, searchID)
+	}
 	return nil
+}
+
+const maxEmbedPerSearch = 100
+
+func (w *Worker) generateEmbeddingsForSearch(ctx context.Context, searchID string) {
+	if os.Getenv("OPENAI_API_KEY") == "" {
+		return
+	}
+	inputs, err := w.repo.GetCompanyEmbedInputs(ctx, searchID, maxEmbedPerSearch)
+	if err != nil {
+		slog.ErrorContext(ctx, "worker: get embed inputs", "search_id", searchID, "error", err)
+		return
+	}
+	if len(inputs) == 0 {
+		return
+	}
+
+	texts := make([]string, len(inputs))
+	for i, inp := range inputs {
+		texts[i] = inp.Text
+	}
+
+	vecs, err := w.embedTexts(ctx, texts)
+	if err != nil {
+		slog.ErrorContext(ctx, "worker: embed company texts", "search_id", searchID, "error", err)
+		return
+	}
+
+	embeddings := make([]domain.CompanyEmbedding, len(inputs))
+	for i, inp := range inputs {
+		embeddings[i] = domain.CompanyEmbedding{CNPJ: inp.CNPJ, UF: inp.UF, Vector: vecs[i]}
+	}
+	if err := w.repo.SaveEmbeddings(ctx, embeddings); err != nil {
+		slog.ErrorContext(ctx, "worker: save embeddings", "search_id", searchID, "error", err)
+		return
+	}
+	slog.InfoContext(ctx, "worker: embeddings cached", "search_id", searchID, "count", len(embeddings))
 }
 
 func (w *Worker) execute(ctx context.Context, s *domain.Search) (int, error) {
@@ -160,7 +233,7 @@ func (w *Worker) execute(ctx context.Context, s *domain.Search) (int, error) {
 		if err != nil {
 			return 0, fmt.Errorf("embed query: %w", err)
 		}
-		return w.repo.RunSemanticSearch(ctx, s.ID, s.Filters, vec)
+		return w.repo.RunSemanticSearch(ctx, s.ID, s.Filters, vec, *s.QueryText)
 
 	default:
 		return 0, fmt.Errorf("unknown search mode: %s", s.Mode)
@@ -186,6 +259,14 @@ type embeddingResponse struct {
 }
 
 func (w *Worker) embedText(ctx context.Context, text string) ([]float32, error) {
+	vecs, err := w.embedTexts(ctx, []string{text})
+	if err != nil {
+		return nil, err
+	}
+	return vecs[0], nil
+}
+
+func (w *Worker) embedTexts(ctx context.Context, texts []string) ([][]float32, error) {
 	apiKey := os.Getenv("OPENAI_API_KEY")
 	if apiKey == "" {
 		return nil, fmt.Errorf("OPENAI_API_KEY not set")
@@ -196,7 +277,7 @@ func (w *Worker) embedText(ctx context.Context, text string) ([]float32, error) 
 		model = "text-embedding-3-small"
 	}
 
-	payload, err := json.Marshal(embeddingRequest{Input: []string{text}, Model: model})
+	payload, err := json.Marshal(embeddingRequest{Input: texts, Model: model})
 	if err != nil {
 		return nil, fmt.Errorf("marshal embedding request: %w", err)
 	}
@@ -230,8 +311,15 @@ func (w *Worker) embedText(ctx context.Context, text string) ([]float32, error) 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("openai unexpected status %d", resp.StatusCode)
 	}
-	if len(result.Data) == 0 {
-		return nil, fmt.Errorf("openai returned empty embedding")
+	if len(result.Data) != len(texts) {
+		return nil, fmt.Errorf("openai returned %d embeddings, expected %d", len(result.Data), len(texts))
 	}
-	return result.Data[0].Embedding, nil
+
+	vecs := make([][]float32, len(texts))
+	for _, d := range result.Data {
+		if d.Index < len(vecs) {
+			vecs[d.Index] = d.Embedding
+		}
+	}
+	return vecs, nil
 }

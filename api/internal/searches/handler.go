@@ -12,6 +12,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	authpkg "github.com/vantaggio/prospect-api/internal/auth"
 	"github.com/vantaggio/prospect-api/internal/domain"
+	"github.com/vantaggio/prospect-api/pkg/brazil"
 	"github.com/vantaggio/prospect-api/pkg/httputil"
 )
 
@@ -49,6 +50,8 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		httputil.Error(w, http.StatusBadRequest, `mode deve ser "structured" ou "semantic"`)
 		return
 	}
+
+	normalizeFilters(&req.Filters)
 
 	search, err := h.svc.Create(r.Context(), orgID, userID, req.Mode, req.Filters, req.Query)
 	if err != nil {
@@ -111,6 +114,36 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	httputil.JSON(w, http.StatusOK, resp)
 }
 
+func (h *Handler) Estimate(w http.ResponseWriter, r *http.Request) {
+	var req createSearchRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httputil.Error(w, http.StatusBadRequest, "corpo da requisição inválido")
+		return
+	}
+	if req.Mode != domain.SearchModeStructured && req.Mode != domain.SearchModeSemantic {
+		httputil.Error(w, http.StatusBadRequest, `mode deve ser "structured" ou "semantic"`)
+		return
+	}
+
+	normalizeFilters(&req.Filters)
+
+	query := ""
+	if req.Query != nil {
+		query = *req.Query
+	}
+	count, err := h.svc.Estimate(r.Context(), req.Mode, req.Filters, query)
+	if err != nil {
+		slog.ErrorContext(r.Context(), "estimate search", "error", err)
+		httputil.Error(w, http.StatusInternalServerError, "erro interno")
+		return
+	}
+	const maxStructuredCredits = 1000
+	if req.Mode == domain.SearchModeStructured && count > maxStructuredCredits {
+		count = maxStructuredCredits
+	}
+	httputil.JSON(w, http.StatusOK, map[string]int{"estimate": count})
+}
+
 func (h *Handler) SearchCNAEs(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query().Get("q")
 	cnaes, err := h.svc.SearchCNAEs(r.Context(), q)
@@ -120,6 +153,12 @@ func (h *Handler) SearchCNAEs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httputil.JSON(w, http.StatusOK, cnaes)
+}
+
+func normalizeFilters(f *domain.SearchFilters) {
+	for i, cnae := range f.CNAEs {
+		f.CNAEs[i] = brazil.NormalizeCNAE(cnae)
+	}
 }
 
 func parseIntParam(r *http.Request, key string, def int) int {
