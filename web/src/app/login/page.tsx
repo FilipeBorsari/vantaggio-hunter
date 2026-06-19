@@ -28,7 +28,8 @@ export default function LoginPage() {
         setError(body?.error ?? "Credenciais inválidas");
         return;
       }
-      router.push("/companies");
+      const data = await res.json().catch(() => ({}));
+      router.push(data.redirect ?? "/companies");
       router.refresh();
     } catch {
       setError("Erro ao conectar com o servidor");
@@ -38,17 +39,17 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+    <div className="min-h-screen flex items-center justify-center bg-v-bg">
       <div className="w-full max-w-md">
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
+        <div className="bg-v-card rounded-2xl border border-v-border p-8">
           <div className="mb-8 text-center">
-            <h1 className="text-2xl font-bold text-gray-900">Vantaggio Hunter</h1>
-            <p className="mt-1 text-sm text-gray-500">Faça login para continuar</p>
+            <h1 className="text-2xl font-bold text-v-accent">Vantaggio Hunter</h1>
+            <p className="mt-1 text-sm text-v-muted">Faça login para continuar</p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} method="POST" className="space-y-5">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="email" className="block text-sm font-medium text-v-text/80 mb-1">
                 E-mail
               </label>
               <input
@@ -57,13 +58,13 @@ export default function LoginPage() {
                 type="email"
                 required
                 autoComplete="email"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-v-border rounded-lg text-sm text-v-text bg-v-bg placeholder:text-v-muted focus:outline-none focus:ring-2 focus:ring-v-accent focus:border-transparent"
                 placeholder="voce@empresa.com"
               />
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="password" className="block text-sm font-medium text-v-text/80 mb-1">
                 Senha
               </label>
               <input
@@ -72,13 +73,13 @@ export default function LoginPage() {
                 type="password"
                 required
                 autoComplete="current-password"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-v-border rounded-lg text-sm text-v-text bg-v-bg placeholder:text-v-muted focus:outline-none focus:ring-2 focus:ring-v-accent focus:border-transparent"
                 placeholder="••••••••"
               />
             </div>
 
             {error && (
-              <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+              <p className="text-sm text-red-400 bg-red-900/30 border border-red-900/50 rounded-lg px-3 py-2">
                 {error}
               </p>
             )}
@@ -86,7 +87,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-medium py-2 px-4 rounded-lg text-sm transition-colors"
+              className="w-full bg-v-accent hover:bg-v-glow disabled:opacity-50 text-white font-medium py-2 px-4 rounded-lg text-sm transition-colors"
             >
               {loading ? "Entrando..." : "Entrar"}
             </button>

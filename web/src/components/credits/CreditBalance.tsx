@@ -39,10 +39,10 @@ export default function CreditBalance() {
 
   const colorClass =
     balance === 0
-      ? "text-red-600"
+      ? "text-red-400"
       : balance < 100
-      ? "text-orange-500"
-      : "text-gray-600";
+      ? "text-amber-400"
+      : "text-v-muted";
 
   return (
     <Link

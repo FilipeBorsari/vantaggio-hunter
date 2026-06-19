@@ -22,6 +22,7 @@ interface SearchResponse {
   mode?: "structured" | "semantic";
   status: "queued" | "processing" | "done" | "failed";
   result_count?: number;
+  error_msg?: string;
   results?: SearchResult[];
   page?: number;
   limit?: number;
@@ -47,10 +48,10 @@ function SkeletonRow({ isSemantic }: { isSemantic: boolean }) {
     ? "grid-cols-[28px_200px_1fr_160px_120px_80px_64px_96px]"
     : "grid-cols-[28px_200px_1fr_160px_120px_80px_96px]";
   return (
-    <div className={`grid ${grid} gap-2 items-center px-4 h-12 border-b border-gray-50 animate-pulse`}>
-      <div className="h-4 w-4 bg-gray-200 rounded" />
+    <div className={`grid ${grid} gap-2 items-center px-4 h-12 border-b border-v-card-border animate-pulse`}>
+      <div className="h-4 w-4 bg-v-border rounded" />
       {cols.map((w, i) => (
-        <div key={i} className="h-3 bg-gray-200 rounded" style={{ width: `${Math.min(w, 100)}%` }} />
+        <div key={i} className="h-3 bg-v-border rounded" style={{ width: `${Math.min(w, 100)}%` }} />
       ))}
     </div>
   );
@@ -96,39 +97,39 @@ function ExportModal({ count, searchId, selectedCNPJs, onClose, onSuccess }: Exp
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm mx-4 flex flex-col gap-4">
+      <div className="absolute inset-0 bg-black/60" onClick={onClose} />
+      <div className="relative bg-v-card border border-v-border rounded-2xl shadow-xl p-6 w-full max-w-sm mx-4 flex flex-col gap-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-base font-semibold text-gray-900">Exportar para CRM</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+          <h2 className="text-base font-semibold text-v-text">Exportar para CRM</h2>
+          <button onClick={onClose} className="text-v-muted hover:text-v-text">
             <X size={18} />
           </button>
         </div>
-        <div className="bg-gray-50 rounded-xl px-4 py-3 text-sm text-gray-700 space-y-1">
+        <div className="bg-v-bg rounded-xl px-4 py-3 text-sm text-v-text/80 space-y-1">
           <div className="flex justify-between">
             <span>Leads selecionados</span>
             <span className="font-medium">{count}</span>
           </div>
           <div className="flex justify-between">
             <span>Custo total</span>
-            <span className="font-medium text-indigo-700">{count} crédito{count !== 1 ? "s" : ""}</span>
+            <span className="font-medium text-v-accent">{count} crédito{count !== 1 ? "s" : ""}</span>
           </div>
         </div>
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-v-muted">
           O débito ocorre por lead enviado com sucesso. Leads que falharem não serão cobrados.
         </p>
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && <p className="text-sm text-red-400">{error}</p>}
         <div className="flex gap-2">
           <button
             onClick={onClose}
-            className="flex-1 px-4 py-2 border border-gray-300 text-sm rounded-lg hover:bg-gray-50"
+            className="flex-1 px-4 py-2 border border-v-border text-v-text text-sm rounded-lg hover:bg-v-border/40"
           >
             Cancelar
           </button>
           <button
             onClick={handleConfirm}
             disabled={loading}
-            className="flex-1 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+            className="flex-1 px-4 py-2 bg-v-accent text-white text-sm font-medium rounded-lg hover:bg-v-glow disabled:opacity-50"
           >
             {loading ? "Enviando..." : "Confirmar export"}
           </button>
@@ -140,9 +141,9 @@ function ExportModal({ count, searchId, selectedCNPJs, onClose, onSuccess }: Exp
 
 function AIScoreBadge({ score }: { score: number }) {
   const color =
-    score > 70 ? "bg-green-50 text-green-700 border-green-200"
-    : score >= 40 ? "bg-yellow-50 text-yellow-700 border-yellow-200"
-    : "bg-red-50 text-red-700 border-red-200";
+    score > 70 ? "bg-green-900/30 text-green-400 border-green-800"
+    : score >= 40 ? "bg-yellow-900/30 text-yellow-400 border-yellow-800"
+    : "bg-red-900/30 text-red-400 border-red-800";
   return (
     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold border ${color}`}>
       {score}
@@ -295,37 +296,53 @@ export default function SearchResultsPage() {
       <div className="flex items-center gap-3">
         <button
           onClick={() => router.push("/search")}
-          className="p-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-gray-500"
+          className="p-1.5 rounded-lg border border-v-border hover:bg-v-border/40 text-v-muted"
         >
           <ArrowLeft size={16} />
         </button>
         <div>
-          <h1 className="text-xl font-semibold text-gray-900">
+          <h1 className="text-xl font-semibold text-v-text">
             {isLoading ? "Processando busca..." : data?.status === "failed" ? "Busca falhou" : `${(data?.result_count ?? 0).toLocaleString("pt-BR")} empresas encontradas`}
           </h1>
-          <p className="text-xs text-gray-500 font-mono mt-0.5">{id}</p>
+          <p className="text-xs text-v-muted font-mono mt-0.5">{id}</p>
         </div>
         {isLoading && (
-          <RefreshCw size={16} className="ml-2 text-indigo-500 animate-spin" />
+          <RefreshCw size={16} className="ml-2 text-v-accent animate-spin" />
         )}
       </div>
 
       {data?.status === "failed" && (
-        <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700">
-          A busca falhou. Tente criar uma nova busca.
+        <div className="bg-red-900/30 border border-red-900/50 rounded-xl px-4 py-3 text-sm text-red-400">
+          {data.error_msg === "créditos insuficientes" ? (
+            <span>
+              Créditos insuficientes para processar esta busca ({data.error_msg}).{" "}
+              <a href="/credits" className="underline font-medium hover:text-red-300">
+                Comprar créditos →
+              </a>
+            </span>
+          ) : (
+            <span>
+              {data.error_msg
+                ? `Busca falhou: ${data.error_msg}.`
+                : "A busca falhou."}{" "}
+              <a href="/search" className="underline font-medium hover:text-red-300">
+                Tentar novamente →
+              </a>
+            </span>
+          )}
         </div>
       )}
 
       {/* Export/qualify action bar */}
       {selected.size > 0 && (
-        <div className="flex items-center justify-between bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-2.5">
-          <span className="text-sm text-indigo-700 font-medium">
+        <div className="flex items-center justify-between bg-v-accent/10 border border-v-accent/30 rounded-xl px-4 py-2.5">
+          <span className="text-sm text-v-accent font-medium">
             {selected.size} lead{selected.size !== 1 ? "s" : ""} selecionado{selected.size !== 1 ? "s" : ""}
           </span>
           <div className="flex items-center gap-2">
             <button
               onClick={() => setSelected(new Set())}
-              className="text-xs text-indigo-500 hover:text-indigo-700"
+              className="text-xs text-v-muted hover:text-v-text"
             >
               Limpar seleção
             </button>
@@ -335,14 +352,14 @@ export default function SearchResultsPage() {
                 setQualifyBatch(unqualified);
                 setShowQualifyModal(true);
               }}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 text-white text-xs font-medium rounded-lg hover:bg-purple-700"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-900/50 border border-purple-700 text-purple-300 text-xs font-medium rounded-lg hover:bg-purple-900"
             >
               <Sparkles size={12} />
               Qualificar ({Array.from(selected).filter((c) => !aiScores.has(c)).length * 10} créditos)
             </button>
             <button
               onClick={() => setShowModal(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white text-xs font-medium rounded-lg hover:bg-indigo-700"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-v-accent text-white text-xs font-medium rounded-lg hover:bg-v-glow"
             >
               <Upload size={12} />
               Exportar para CRM ({selected.size})
@@ -352,21 +369,21 @@ export default function SearchResultsPage() {
       )}
 
       {exportToast && (
-        <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-xl px-4 py-3 text-sm text-green-700">
+        <div className="flex items-center gap-2 bg-green-900/30 border border-green-900/50 rounded-xl px-4 py-3 text-sm text-green-400">
           Export iniciado com sucesso — acompanhe em{" "}
           <a href="/exports" className="underline font-medium">Exportações</a>
         </div>
       )}
 
-      <div className="flex-1 bg-white border border-gray-200 rounded-xl overflow-hidden flex flex-col min-h-0">
+      <div className="flex-1 bg-v-card border border-v-card-border rounded-xl overflow-hidden flex flex-col min-h-0">
         {/* Header */}
-        <div className={`grid ${gridCols} gap-2 px-4 py-3 bg-gray-50 border-b border-gray-100 text-xs font-medium text-gray-600 shrink-0`}>
+        <div className={`grid ${gridCols} gap-2 px-4 py-3 bg-v-bg border-b border-v-border text-xs font-medium text-v-muted shrink-0`}>
           <input
             type="checkbox"
             checked={allPageSelected && results.length > 0}
             onChange={toggleAll}
             disabled={isLoading || results.length === 0}
-            className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+            className="h-4 w-4 rounded border-v-border text-v-accent focus:ring-v-accent cursor-pointer accent-v-accent"
           />
           <span>CNPJ</span>
           <span>Razão Social</span>
@@ -374,7 +391,7 @@ export default function SearchResultsPage() {
           <span>Capital</span>
           <span>Situação</span>
           {isSemantic && <span>Score</span>}
-          <span className="flex items-center gap-1"><Sparkles size={11} className="text-purple-500" />Score IA</span>
+          <span className="flex items-center gap-1"><Sparkles size={11} className="text-purple-400" />Score IA</span>
         </div>
 
         {/* Body */}
@@ -382,13 +399,13 @@ export default function SearchResultsPage() {
           {isLoading ? (
             <div className="flex flex-col">
               {Array.from({ length: 8 }).map((_, i) => <SkeletonRow key={i} isSemantic={isSemantic} />)}
-              <div className="flex items-center justify-center py-6 text-sm text-gray-400 gap-2">
+              <div className="flex items-center justify-center py-6 text-sm text-v-muted gap-2">
                 <RefreshCw size={14} className="animate-spin" />
                 Processando sua busca...
               </div>
             </div>
           ) : results.length === 0 ? (
-            <div className="flex items-center justify-center h-40 text-sm text-gray-400">
+            <div className="flex items-center justify-center h-40 text-sm text-v-muted">
               Nenhum resultado encontrado
             </div>
           ) : (
@@ -400,27 +417,27 @@ export default function SearchResultsPage() {
                   <div
                     key={virtualRow.key}
                     style={{ position: "absolute", top: virtualRow.start, width: "100%", height: virtualRow.size }}
-                    className={`grid ${gridCols} gap-2 items-center px-4 border-b border-gray-50 hover:bg-gray-50 text-sm ${isChecked ? "bg-indigo-50/40" : ""}`}
+                    className={`grid ${gridCols} gap-2 items-center px-4 border-b border-v-card-border hover:bg-v-border/30 text-sm ${isChecked ? "bg-v-accent/5" : ""}`}
                   >
                     <input
                       type="checkbox"
                       checked={isChecked}
                       onChange={() => toggleOne(r.cnpj)}
-                      className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                      className="h-4 w-4 rounded border-v-border cursor-pointer accent-v-accent"
                     />
-                    <span className="font-mono text-xs text-gray-700 truncate">{formatCNPJ(r.cnpj)}</span>
-                    <span className="font-medium text-gray-900 truncate" title={r.razao_social}>{r.razao_social}</span>
-                    <span className="text-gray-600 truncate">{[r.municipio, r.uf].filter(Boolean).join(" / ")}</span>
-                    <span className="text-gray-600 tabular-nums">{formatCurrency(r.capital_social)}</span>
+                    <span className="font-mono text-xs text-v-muted truncate">{formatCNPJ(r.cnpj)}</span>
+                    <span className="font-medium text-v-text truncate" title={r.razao_social}>{r.razao_social}</span>
+                    <span className="text-v-text/60 truncate">{[r.municipio, r.uf].filter(Boolean).join(" / ")}</span>
+                    <span className="text-v-text/60 tabular-nums">{formatCurrency(r.capital_social)}</span>
                     <span>
                       <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                        r.situacao === 2 ? "bg-green-50 text-green-700" : "bg-gray-100 text-gray-600"
+                        r.situacao === 2 ? "bg-green-900/30 text-green-400" : "bg-v-border text-v-muted"
                       }`}>
                         {SITUACAO_LABEL[r.situacao] ?? r.situacao}
                       </span>
                     </span>
                     {isSemantic && (
-                      <span className="text-gray-600 tabular-nums text-xs">
+                      <span className="text-v-muted tabular-nums text-xs">
                         {r.score != null ? Math.round(r.score * 100) : "—"}
                       </span>
                     )}
@@ -433,7 +450,7 @@ export default function SearchResultsPage() {
                           <button
                             onClick={() => handleQualify(r.cnpj)}
                             disabled={isQualifying}
-                            className="inline-flex items-center gap-1 px-2 py-0.5 text-xs text-purple-600 border border-purple-200 rounded-full hover:bg-purple-50 disabled:opacity-50 disabled:cursor-wait"
+                            className="inline-flex items-center gap-1 px-2 py-0.5 text-xs text-purple-400 border border-purple-800 rounded-full hover:bg-purple-900/40 disabled:opacity-50 disabled:cursor-wait"
                           >
                             <Sparkles size={10} />
                             {isQualifying ? "..." : "10cr"}
@@ -450,22 +467,22 @@ export default function SearchResultsPage() {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 shrink-0">
-            <span className="text-xs text-gray-500">
+          <div className="flex items-center justify-between px-4 py-3 border-t border-v-border shrink-0">
+            <span className="text-xs text-v-muted">
               Página {page} de {totalPages} — {(data?.total ?? 0).toLocaleString("pt-BR")} resultados
             </span>
             <div className="flex gap-2">
               <button
                 onClick={() => handlePageChange(Math.max(1, page - 1))}
                 disabled={page === 1}
-                className="px-3 py-1 text-xs border border-gray-300 rounded-lg disabled:opacity-40 hover:bg-gray-50"
+                className="px-3 py-1 text-xs border border-v-border text-v-muted rounded-lg disabled:opacity-40 hover:bg-v-border/40 hover:text-v-text"
               >
                 Anterior
               </button>
               <button
                 onClick={() => handlePageChange(Math.min(totalPages, page + 1))}
                 disabled={page === totalPages}
-                className="px-3 py-1 text-xs border border-gray-300 rounded-lg disabled:opacity-40 hover:bg-gray-50"
+                className="px-3 py-1 text-xs border border-v-border text-v-muted rounded-lg disabled:opacity-40 hover:bg-v-border/40 hover:text-v-text"
               >
                 Próxima
               </button>
@@ -478,7 +495,7 @@ export default function SearchResultsPage() {
         <div className="flex justify-end">
           <a
             href="/search"
-            className="inline-flex items-center gap-2 text-sm text-indigo-600 hover:text-indigo-800 font-medium"
+            className="inline-flex items-center gap-2 text-sm text-v-accent hover:text-v-accent-2 font-medium"
           >
             Nova Busca →
           </a>
@@ -497,33 +514,33 @@ export default function SearchResultsPage() {
 
       {showQualifyModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setShowQualifyModal(false)} />
-          <div className="relative bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm mx-4 flex flex-col gap-4">
+          <div className="absolute inset-0 bg-black/60" onClick={() => setShowQualifyModal(false)} />
+          <div className="relative bg-v-card border border-v-border rounded-2xl shadow-xl p-6 w-full max-w-sm mx-4 flex flex-col gap-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-base font-semibold text-gray-900">Qualificar Empresas</h2>
-              <button onClick={() => setShowQualifyModal(false)} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
+              <h2 className="text-base font-semibold text-v-text">Qualificar Empresas</h2>
+              <button onClick={() => setShowQualifyModal(false)} className="text-v-muted hover:text-v-text"><X size={18} /></button>
             </div>
-            <div className="bg-gray-50 rounded-xl px-4 py-3 text-sm text-gray-700 space-y-1">
+            <div className="bg-v-bg rounded-xl px-4 py-3 text-sm text-v-text/80 space-y-1">
               <div className="flex justify-between">
                 <span>Empresas a qualificar</span>
                 <span className="font-medium">{qualifyBatch.length}</span>
               </div>
               <div className="flex justify-between">
                 <span>Custo total</span>
-                <span className="font-medium text-purple-700">{qualifyBatch.length * 10} créditos</span>
+                <span className="font-medium text-purple-400">{qualifyBatch.length * 10} créditos</span>
               </div>
             </div>
             <div className="flex gap-2">
               <button
                 onClick={() => setShowQualifyModal(false)}
-                className="flex-1 px-4 py-2 border border-gray-300 text-sm rounded-lg hover:bg-gray-50"
+                className="flex-1 px-4 py-2 border border-v-border text-v-text text-sm rounded-lg hover:bg-v-border/40"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleQualifyBatch}
                 disabled={qualifyBatchLoading || qualifyBatch.length === 0}
-                className="flex-1 px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 disabled:opacity-50"
+                className="flex-1 px-4 py-2 bg-purple-700 text-white text-sm font-medium rounded-lg hover:bg-purple-600 disabled:opacity-50"
               >
                 {qualifyBatchLoading ? "Qualificando..." : "Confirmar"}
               </button>

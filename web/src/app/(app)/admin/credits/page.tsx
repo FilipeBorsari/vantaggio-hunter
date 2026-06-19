@@ -9,6 +9,8 @@ interface Org {
 
 type Status = "idle" | "loading" | "success" | "error";
 
+const inputClass = "border border-v-border rounded-lg px-3 py-2 text-sm text-v-text bg-v-bg placeholder:text-v-muted focus:outline-none focus:ring-2 focus:ring-v-accent";
+
 export default function AdminCreditsPage() {
   const [orgs, setOrgs] = useState<Org[]>([]);
   const [orgID, setOrgID] = useState("");
@@ -69,18 +71,18 @@ export default function AdminCreditsPage() {
   return (
     <div className="max-w-lg">
       <div className="mb-6">
-        <h1 className="text-xl font-semibold text-gray-900">Distribuir Créditos</h1>
-        <p className="text-sm text-gray-500 mt-0.5">
+        <h1 className="text-xl font-semibold text-v-text">Distribuir Créditos</h1>
+        <p className="text-sm text-v-muted mt-0.5">
           Adiciona créditos ao saldo de uma organização.
         </p>
       </div>
 
       <form
         onSubmit={handleSubmit}
-        className="bg-white border border-gray-200 rounded-xl p-6 flex flex-col gap-5"
+        className="bg-v-card border border-v-card-border rounded-xl p-6 flex flex-col gap-5"
       >
         <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium text-gray-700" htmlFor="org">
+          <label className="text-sm font-medium text-v-text/80" htmlFor="org">
             Organização
           </label>
           <select
@@ -88,7 +90,7 @@ export default function AdminCreditsPage() {
             value={orgID}
             onChange={(e) => setOrgID(e.target.value)}
             required
-            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className={inputClass}
           >
             {orgs.length === 0 && (
               <option value="" disabled>
@@ -104,7 +106,7 @@ export default function AdminCreditsPage() {
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium text-gray-700" htmlFor="amount">
+          <label className="text-sm font-medium text-v-text/80" htmlFor="amount">
             Quantidade de créditos
           </label>
           <input
@@ -116,13 +118,13 @@ export default function AdminCreditsPage() {
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             required
-            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className={inputClass}
           />
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium text-gray-700" htmlFor="desc">
-            Descrição <span className="text-gray-400 font-normal">(opcional)</span>
+          <label className="text-sm font-medium text-v-text/80" htmlFor="desc">
+            Descrição <span className="text-v-muted font-normal">(opcional)</span>
           </label>
           <input
             id="desc"
@@ -130,18 +132,18 @@ export default function AdminCreditsPage() {
             placeholder="ex: Compra plano Pro"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className={inputClass}
           />
         </div>
 
         {status === "error" && (
-          <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+          <p className="text-sm text-red-400 bg-red-900/30 border border-red-900/50 rounded-lg px-3 py-2">
             {errorMsg}
           </p>
         )}
 
         {status === "success" && (
-          <p className="text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
+          <p className="text-sm text-green-400 bg-green-900/30 border border-green-800 rounded-lg px-3 py-2">
             Créditos adicionados com sucesso.
           </p>
         )}
@@ -149,7 +151,7 @@ export default function AdminCreditsPage() {
         <button
           type="submit"
           disabled={status === "loading"}
-          className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+          className="bg-v-accent hover:bg-v-glow disabled:opacity-50 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
         >
           {status === "loading" ? "Adicionando…" : "Adicionar créditos"}
         </button>

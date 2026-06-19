@@ -20,10 +20,10 @@ interface SearchListResponse {
 }
 
 const STATUS_LABEL: Record<string, { label: string; className: string }> = {
-  queued:     { label: "Na fila",      className: "bg-yellow-50 text-yellow-700" },
-  processing: { label: "Processando",  className: "bg-blue-50 text-blue-700" },
-  done:       { label: "Concluída",    className: "bg-green-50 text-green-700" },
-  failed:     { label: "Falhou",       className: "bg-red-50 text-red-700" },
+  queued:     { label: "Na fila",      className: "bg-yellow-900/30 text-yellow-400" },
+  processing: { label: "Processando",  className: "bg-blue-900/30 text-blue-400" },
+  done:       { label: "Concluída",    className: "bg-green-900/30 text-green-400" },
+  failed:     { label: "Falhou",       className: "bg-red-900/30 text-red-400" },
 };
 
 const MODE_LABEL: Record<string, string> = {
@@ -75,26 +75,26 @@ export default function SearchHistoryPage() {
       <div className="flex items-center gap-3">
         <button
           onClick={() => router.push("/search")}
-          className="p-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-gray-500"
+          className="p-1.5 rounded-lg border border-v-border hover:bg-v-border/40 text-v-muted"
         >
           <ArrowLeft size={16} />
         </button>
         <div>
-          <h1 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-            <Clock size={18} className="text-gray-400" />
+          <h1 className="text-xl font-semibold text-v-text flex items-center gap-2">
+            <Clock size={18} className="text-v-muted" />
             Histórico de Buscas
           </h1>
           {data && (
-            <p className="text-sm text-gray-500 mt-0.5">
+            <p className="text-sm text-v-muted mt-0.5">
               {data.total.toLocaleString("pt-BR")} busca{data.total !== 1 ? "s" : ""}
             </p>
           )}
         </div>
       </div>
 
-      <div className="flex-1 bg-white border border-gray-200 rounded-xl overflow-hidden flex flex-col min-h-0">
+      <div className="flex-1 bg-v-card border border-v-card-border rounded-xl overflow-hidden flex flex-col min-h-0">
         {/* Header */}
-        <div className="grid grid-cols-[160px_80px_1fr_120px_80px] gap-2 px-4 py-3 bg-gray-50 border-b border-gray-100 text-xs font-medium text-gray-600 shrink-0">
+        <div className="grid grid-cols-[160px_80px_1fr_120px_80px] gap-2 px-4 py-3 bg-v-bg border-b border-v-border text-xs font-medium text-v-muted shrink-0">
           <span>Data</span>
           <span>Modo</span>
           <span>Filtros / Consulta</span>
@@ -104,29 +104,29 @@ export default function SearchHistoryPage() {
 
         <div className="flex-1 overflow-auto">
           {loading ? (
-            <div className="flex items-center justify-center h-40 text-sm text-gray-400">
+            <div className="flex items-center justify-center h-40 text-sm text-v-muted">
               Carregando...
             </div>
           ) : searches.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-40 gap-2 text-sm text-gray-400">
-              <Clock size={32} className="text-gray-200" />
+            <div className="flex flex-col items-center justify-center h-40 gap-2 text-sm text-v-muted">
+              <Clock size={32} className="opacity-20" />
               Nenhuma busca realizada ainda
             </div>
           ) : (
             searches.map((s) => {
-              const st = STATUS_LABEL[s.status] ?? { label: s.status, className: "bg-gray-100 text-gray-600" };
+              const st = STATUS_LABEL[s.status] ?? { label: s.status, className: "bg-v-border text-v-muted" };
               return (
                 <button
                   key={s.id}
                   onClick={() => router.push(`/search/${s.id}`)}
-                  className="w-full grid grid-cols-[160px_80px_1fr_120px_80px] gap-2 items-center px-4 py-3 border-b border-gray-50 hover:bg-indigo-50 text-left text-sm transition-colors"
+                  className="w-full grid grid-cols-[160px_80px_1fr_120px_80px] gap-2 items-center px-4 py-3 border-b border-v-card-border hover:bg-v-border/30 text-left text-sm transition-colors"
                 >
-                  <span className="text-gray-600 text-xs">{formatDate(s.created_at)}</span>
-                  <span className="text-gray-700 font-medium">{MODE_LABEL[s.mode] ?? s.mode}</span>
-                  <span className="text-gray-600 truncate text-xs" title={summarizeFilters(s)}>
+                  <span className="text-v-muted text-xs">{formatDate(s.created_at)}</span>
+                  <span className="text-v-text/80 font-medium">{MODE_LABEL[s.mode] ?? s.mode}</span>
+                  <span className="text-v-text/60 truncate text-xs" title={summarizeFilters(s)}>
                     {summarizeFilters(s)}
                   </span>
-                  <span className="text-gray-700 tabular-nums">
+                  <span className="text-v-text/80 tabular-nums">
                     {s.result_count != null ? s.result_count.toLocaleString("pt-BR") : "—"}
                   </span>
                   <span>
@@ -141,20 +141,20 @@ export default function SearchHistoryPage() {
         </div>
 
         {totalPages > 1 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 shrink-0">
-            <span className="text-xs text-gray-500">Página {page} de {totalPages}</span>
+          <div className="flex items-center justify-between px-4 py-3 border-t border-v-border shrink-0">
+            <span className="text-xs text-v-muted">Página {page} de {totalPages}</span>
             <div className="flex gap-2">
               <button
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page === 1}
-                className="px-3 py-1 text-xs border border-gray-300 rounded-lg disabled:opacity-40 hover:bg-gray-50"
+                className="px-3 py-1 text-xs border border-v-border text-v-muted rounded-lg disabled:opacity-40 hover:bg-v-border/40 hover:text-v-text"
               >
                 Anterior
               </button>
               <button
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={page === totalPages}
-                className="px-3 py-1 text-xs border border-gray-300 rounded-lg disabled:opacity-40 hover:bg-gray-50"
+                className="px-3 py-1 text-xs border border-v-border text-v-muted rounded-lg disabled:opacity-40 hover:bg-v-border/40 hover:text-v-text"
               >
                 Próxima
               </button>

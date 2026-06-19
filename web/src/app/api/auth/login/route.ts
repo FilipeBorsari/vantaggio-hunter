@@ -3,6 +3,21 @@ import { NextRequest, NextResponse } from "next/server";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
+function decodeRole(token: string): string {
+  try {
+    const payload = JSON.parse(Buffer.from(token.split(".")[1], "base64url").toString("utf-8"));
+    return payload.role ?? "";
+  } catch {
+    return "";
+  }
+}
+
+const ROLE_HOME: Record<string, string> = {
+  super_admin: "/admin",
+  org_admin: "/org",
+  seller: "/companies",
+};
+
 export async function POST(req: NextRequest) {
   const body = await req.json();
 
@@ -35,5 +50,8 @@ export async function POST(req: NextRequest) {
     path: "/",
   });
 
-  return NextResponse.json({ ok: true });
+  const role = decodeRole(pair.access_token);
+  const redirect = ROLE_HOME[role] ?? "/companies";
+
+  return NextResponse.json({ ok: true, redirect });
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+
 import { useRouter } from "next/navigation";
 import { Search, Sparkles } from "lucide-react";
 
@@ -61,15 +62,15 @@ function CNAEMultiSelect({
 
   return (
     <div className="relative">
-      <label className="block text-xs font-medium text-gray-600 mb-1">CNAEs</label>
-      <div className="flex flex-wrap gap-1 min-h-[36px] px-2 py-1 border border-gray-300 rounded-lg bg-white focus-within:ring-2 focus-within:ring-indigo-500">
+      <label className="block text-xs font-medium text-v-muted mb-1">CNAEs</label>
+      <div className="flex flex-wrap gap-1 min-h-[36px] px-2 py-1 border border-v-border rounded-lg bg-v-bg focus-within:ring-2 focus-within:ring-v-accent">
         {selected.map((code) => (
           <span
             key={code}
-            className="inline-flex items-center gap-1 px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded text-xs font-mono"
+            className="inline-flex items-center gap-1 px-2 py-0.5 bg-v-accent/10 text-v-accent rounded text-xs font-mono"
           >
             {code}
-            <button type="button" onClick={() => removeCNAE(code)} className="hover:text-indigo-900 font-bold">×</button>
+            <button type="button" onClick={() => removeCNAE(code)} className="hover:text-v-accent-2 font-bold">×</button>
           </span>
         ))}
         <input
@@ -78,20 +79,20 @@ function CNAEMultiSelect({
           onFocus={() => setOpen(true)}
           onBlur={() => setTimeout(() => setOpen(false), 200)}
           placeholder="Buscar CNAE..."
-          className="flex-1 min-w-24 text-sm outline-none bg-transparent"
+          className="flex-1 min-w-24 text-sm outline-none bg-transparent text-v-text placeholder:text-v-muted"
         />
       </div>
       {open && suggestions.length > 0 && (
-        <ul className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-auto">
+        <ul className="absolute z-10 mt-1 w-full bg-v-card border border-v-border rounded-lg shadow-lg max-h-48 overflow-auto">
           {suggestions.map((c) => (
             <li key={c.code}>
               <button
                 type="button"
                 onMouseDown={() => addCNAE(c.code)}
-                className="w-full text-left px-3 py-2 text-sm hover:bg-indigo-50 flex gap-2"
+                className="w-full text-left px-3 py-2 text-sm hover:bg-v-border/40 flex gap-2"
               >
-                <span className="font-mono text-indigo-600 shrink-0">{c.code}</span>
-                <span className="text-gray-700 truncate">{c.description}</span>
+                <span className="font-mono text-v-accent shrink-0">{c.code}</span>
+                <span className="text-v-text/70 truncate">{c.description}</span>
               </button>
             </li>
           ))}
@@ -100,6 +101,8 @@ function CNAEMultiSelect({
     </div>
   );
 }
+
+const inputClass = "w-full px-3 py-1.5 border border-v-border rounded-lg text-sm text-v-text bg-v-bg focus:outline-none focus:ring-2 focus:ring-v-accent";
 
 export default function SearchPage() {
   const router = useRouter();
@@ -110,6 +113,62 @@ export default function SearchPage() {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [estimate, setEstimate] = useState<number | null>(null);
+  const [estimating, setEstimating] = useState(false);
+  const estimateTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const fetchEstimate = useCallback(async (
+    currentMode: "structured" | "semantic",
+    currentQuery: string,
+    currentFilters: StructuredFilters,
+  ) => {
+    const hasData = currentMode === "semantic"
+      ? currentQuery.trim().length > 3
+      : currentFilters.cnaes.length > 0 || !!currentFilters.uf || !!currentFilters.status;
+    if (!hasData) { setEstimate(null); return; }
+
+    setEstimating(true);
+    try {
+      const body = currentMode === "semantic"
+        ? {
+            mode: "semantic",
+            query: currentQuery,
+            filters: {
+              uf: currentFilters.uf || undefined,
+              status: currentFilters.status ? parseInt(currentFilters.status) : undefined,
+            },
+          }
+        : {
+            mode: "structured",
+            filters: {
+              cnaes: currentFilters.cnaes.length > 0 ? currentFilters.cnaes : undefined,
+              uf: currentFilters.uf || undefined,
+              city: currentFilters.city || undefined,
+              capital_min: currentFilters.capital_min ? parseFloat(currentFilters.capital_min) : undefined,
+              status: currentFilters.status ? parseInt(currentFilters.status) : undefined,
+            },
+          };
+      const res = await fetch("/api/searches/estimate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setEstimate(data.estimate ?? null);
+      }
+    } catch {
+      // estimativa é opcional, ignora falha silenciosamente
+    } finally {
+      setEstimating(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (estimateTimer.current) clearTimeout(estimateTimer.current);
+    estimateTimer.current = setTimeout(() => fetchEstimate(mode, query, filters), 500);
+    return () => { if (estimateTimer.current) clearTimeout(estimateTimer.current); };
+  }, [mode, query, filters, fetchEstimate]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -162,19 +221,19 @@ export default function SearchPage() {
   return (
     <div className="max-w-2xl mx-auto flex flex-col gap-6">
       <div>
-        <h1 className="text-xl font-semibold text-gray-900">Nova Busca</h1>
-        <p className="text-sm text-gray-500 mt-0.5">
+        <h1 className="text-xl font-semibold text-v-text">Nova Busca</h1>
+        <p className="text-sm text-v-muted mt-0.5">
           Encontre empresas por filtros estruturados ou por descrição em linguagem natural.
         </p>
       </div>
 
       {/* Mode toggle */}
-      <div className="flex gap-1 p-1 bg-gray-100 rounded-xl w-fit">
+      <div className="flex gap-1 p-1 bg-v-border rounded-xl w-fit">
         <button
           type="button"
           onClick={() => setMode("structured")}
           className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-            mode === "structured" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"
+            mode === "structured" ? "bg-v-accent text-white" : "text-v-muted hover:text-v-text"
           }`}
         >
           <Search size={14} />
@@ -184,7 +243,7 @@ export default function SearchPage() {
           type="button"
           onClick={() => setMode("semantic")}
           className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-            mode === "semantic" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"
+            mode === "semantic" ? "bg-v-accent text-white" : "text-v-muted hover:text-v-text"
           }`}
         >
           <Sparkles size={14} />
@@ -192,11 +251,11 @@ export default function SearchPage() {
         </button>
       </div>
 
-      <form onSubmit={handleSubmit} className="bg-white border border-gray-200 rounded-xl p-5 flex flex-col gap-4">
+      <form onSubmit={handleSubmit} className="bg-v-card border border-v-card-border rounded-xl p-5 flex flex-col gap-4">
         {mode === "semantic" ? (
           <>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">
+              <label className="block text-xs font-medium text-v-muted mb-1">
                 Descreva o perfil de empresa que você procura
               </label>
               <textarea
@@ -205,27 +264,27 @@ export default function SearchPage() {
                 placeholder="Ex: mecânicas de alto faturamento em São Paulo com presença digital"
                 rows={3}
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+                className="w-full px-3 py-2 border border-v-border rounded-lg text-sm text-v-text bg-v-bg placeholder:text-v-muted focus:outline-none focus:ring-2 focus:ring-v-accent resize-none"
               />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">UF (opcional)</label>
+                <label className="block text-xs font-medium text-v-muted mb-1">UF (opcional)</label>
                 <select
                   value={filters.uf}
                   onChange={(e) => setFilters((f) => ({ ...f, uf: e.target.value }))}
-                  className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className={inputClass}
                 >
                   <option value="">Todos os estados</option>
                   {UF_OPTIONS.map((uf) => <option key={uf} value={uf}>{uf}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Situação (opcional)</label>
+                <label className="block text-xs font-medium text-v-muted mb-1">Situação (opcional)</label>
                 <select
                   value={filters.status}
                   onChange={(e) => setFilters((f) => ({ ...f, status: e.target.value }))}
-                  className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className={inputClass}
                 >
                   <option value="">Todas</option>
                   <option value="2">Ativa</option>
@@ -243,44 +302,44 @@ export default function SearchPage() {
             />
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">UF</label>
+                <label className="block text-xs font-medium text-v-muted mb-1">UF</label>
                 <select
                   value={filters.uf}
                   onChange={(e) => setFilters((f) => ({ ...f, uf: e.target.value }))}
-                  className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className={inputClass}
                 >
                   <option value="">Todos os estados</option>
                   {UF_OPTIONS.map((uf) => <option key={uf} value={uf}>{uf}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Cidade</label>
+                <label className="block text-xs font-medium text-v-muted mb-1">Cidade</label>
                 <input
                   value={filters.city}
                   onChange={(e) => setFilters((f) => ({ ...f, city: e.target.value }))}
                   placeholder="Ex: São Paulo"
-                  className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className={inputClass}
                 />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Capital Mínimo (R$)</label>
+                <label className="block text-xs font-medium text-v-muted mb-1">Capital Mínimo (R$)</label>
                 <input
                   type="number"
                   min="0"
                   value={filters.capital_min}
                   onChange={(e) => setFilters((f) => ({ ...f, capital_min: e.target.value }))}
                   placeholder="Ex: 100000"
-                  className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className={inputClass}
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Situação</label>
+                <label className="block text-xs font-medium text-v-muted mb-1">Situação</label>
                 <select
                   value={filters.status}
                   onChange={(e) => setFilters((f) => ({ ...f, status: e.target.value }))}
-                  className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className={inputClass}
                 >
                   <option value="">Todas</option>
                   <option value="2">Ativa</option>
@@ -293,21 +352,34 @@ export default function SearchPage() {
         )}
 
         {error && (
-          <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>
+          <p className="text-sm text-red-400 bg-red-900/30 border border-red-900/50 rounded-lg px-3 py-2">{error}</p>
         )}
 
-        <div className="flex items-center justify-between pt-1">
-          <a href="/search/history" className="text-sm text-gray-500 hover:text-gray-700 underline-offset-2 hover:underline">
-            Ver histórico de buscas
-          </a>
-          <button
-            type="submit"
-            disabled={loading}
-            className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white font-medium px-5 py-2 rounded-lg text-sm transition-colors"
-          >
-            {mode === "semantic" ? <Sparkles size={14} /> : <Search size={14} />}
-            {loading ? "Processando..." : mode === "semantic" ? "Buscar com IA" : "Buscar"}
-          </button>
+        <div className="rounded-lg bg-v-bg border border-v-border px-4 py-3 flex items-center justify-between">
+          <div>
+            <p className="text-xs text-v-muted uppercase tracking-wide font-medium mb-0.5">Gasto estimado em créditos</p>
+            <p className="text-sm font-semibold text-v-text">
+              {estimating
+                ? <span className="text-v-muted font-normal">calculando...</span>
+                : estimate !== null
+                  ? `~${estimate.toLocaleString("pt-BR")} créditos`
+                  : <span className="text-v-muted font-normal">—</span>
+              }
+            </p>
+          </div>
+          <div className="flex items-center gap-4">
+            <a href="/search/history" className="text-sm text-v-muted hover:text-v-text underline-offset-2 hover:underline">
+              Ver histórico
+            </a>
+            <button
+              type="submit"
+              disabled={loading}
+              className="inline-flex items-center gap-2 bg-v-accent hover:bg-v-glow disabled:opacity-60 text-white font-medium px-5 py-2 rounded-lg text-sm transition-colors"
+            >
+              {mode === "semantic" ? <Sparkles size={14} /> : <Search size={14} />}
+              {loading ? "Processando..." : mode === "semantic" ? "Buscar com IA" : "Buscar"}
+            </button>
+          </div>
         </div>
       </form>
     </div>

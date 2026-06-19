@@ -48,20 +48,20 @@ function CNAEAssistant() {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <div className="bg-white border border-gray-200 rounded-xl p-5 flex flex-col gap-4">
+      <div className="bg-v-card border border-v-card-border rounded-xl p-5 flex flex-col gap-4">
         <div>
-          <h2 className="text-base font-semibold text-gray-900 flex items-center gap-2">
-            <Search size={16} className="text-indigo-600" />
+          <h2 className="text-base font-semibold text-v-text flex items-center gap-2">
+            <Search size={16} className="text-v-accent" />
             Encontrar CNAEs Ideais
           </h2>
-          <p className="text-sm text-gray-500 mt-0.5">
+          <p className="text-sm text-v-muted mt-0.5">
             Descreva o negócio ou setor e receba sugestões de CNAEs mais adequados
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">
+            <label className="block text-xs font-medium text-v-muted mb-1">
               Descrição do Negócio
             </label>
             <textarea
@@ -70,12 +70,12 @@ function CNAEAssistant() {
               placeholder="Ex: Loja de roupas femininas online, delivery de comida, consultoria em marketing digital..."
               rows={5}
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+              className="w-full px-3 py-2 border border-v-border rounded-lg text-sm text-v-text bg-v-bg placeholder:text-v-muted focus:outline-none focus:ring-2 focus:ring-v-accent resize-none"
             />
           </div>
 
           {error && (
-            <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+            <p className="text-sm text-red-400 bg-red-900/30 border border-red-900/50 rounded-lg px-3 py-2">
               {error}
             </p>
           )}
@@ -83,7 +83,7 @@ function CNAEAssistant() {
           <button
             type="submit"
             disabled={loading || !description.trim()}
-            className="inline-flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white font-medium px-5 py-2.5 rounded-lg text-sm transition-colors"
+            className="inline-flex items-center justify-center gap-2 bg-v-accent hover:bg-v-glow disabled:opacity-60 text-white font-medium px-5 py-2.5 rounded-lg text-sm transition-colors"
           >
             <Sparkles size={14} />
             {loading ? "Analisando..." : "Analisar CNAEs"}
@@ -91,24 +91,24 @@ function CNAEAssistant() {
         </form>
       </div>
 
-      <div className="bg-white border border-gray-200 rounded-xl p-5 flex flex-col gap-4">
+      <div className="bg-v-card border border-v-card-border rounded-xl p-5 flex flex-col gap-4">
         <div>
-          <h2 className="text-base font-semibold text-gray-900">CNAEs Sugeridos</h2>
-          <p className="text-sm text-gray-500 mt-0.5">
+          <h2 className="text-base font-semibold text-v-text">CNAEs Sugeridos</h2>
+          <p className="text-sm text-v-muted mt-0.5">
             Lista de CNAEs recomendados com códigos e descrições
           </p>
         </div>
 
         {cnaes.length === 0 && !loading && (
-          <div className="flex-1 flex flex-col items-center justify-center py-10 text-gray-400 gap-2">
+          <div className="flex-1 flex flex-col items-center justify-center py-10 text-v-muted gap-2">
             <Search size={32} className="opacity-30" />
             <p className="text-sm">Os CNAEs sugeridos aparecerão aqui após a análise</p>
           </div>
         )}
 
         {loading && (
-          <div className="flex-1 flex flex-col items-center justify-center py-10 text-gray-400 gap-2">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600" />
+          <div className="flex-1 flex flex-col items-center justify-center py-10 text-v-muted gap-2">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-v-accent" />
             <p className="text-sm">Consultando IA...</p>
           </div>
         )}
@@ -118,19 +118,19 @@ function CNAEAssistant() {
             {cnaes.map((cnae) => (
               <li
                 key={cnae.code}
-                className="flex items-start gap-3 p-3 rounded-lg border border-gray-100 hover:border-indigo-200 hover:bg-indigo-50/30 transition-colors group"
+                className="flex items-start gap-3 p-3 rounded-lg border border-v-border hover:border-v-accent/30 hover:bg-v-accent/5 transition-colors group"
               >
-                <span className="font-mono text-sm font-semibold text-indigo-700 shrink-0 bg-indigo-50 px-2 py-0.5 rounded">
+                <span className="font-mono text-sm font-semibold text-v-accent shrink-0 bg-v-accent/10 px-2 py-0.5 rounded">
                   {cnae.code}
                 </span>
-                <span className="text-sm text-gray-700 flex-1 leading-snug">{cnae.description}</span>
+                <span className="text-sm text-v-text/80 flex-1 leading-snug">{cnae.description}</span>
                 <button
                   onClick={() => copyCode(cnae.code)}
                   title="Copiar código"
-                  className="shrink-0 opacity-0 group-hover:opacity-100 text-gray-400 hover:text-indigo-600 transition-all"
+                  className="shrink-0 opacity-0 group-hover:opacity-100 text-v-muted hover:text-v-accent transition-all"
                 >
                   {copiedCode === cnae.code ? (
-                    <Check size={14} className="text-green-600" />
+                    <Check size={14} className="text-green-400" />
                   ) : (
                     <Copy size={14} />
                   )}
@@ -185,20 +185,20 @@ function TemplateGenerator() {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <div className="bg-white border border-gray-200 rounded-xl p-5 flex flex-col gap-4">
+      <div className="bg-v-card border border-v-card-border rounded-xl p-5 flex flex-col gap-4">
         <div>
-          <h2 className="text-base font-semibold text-gray-900 flex items-center gap-2">
-            <MessageSquare size={16} className="text-indigo-600" />
+          <h2 className="text-base font-semibold text-v-text flex items-center gap-2">
+            <MessageSquare size={16} className="text-v-accent" />
             Gerar Template de Mensagem
           </h2>
-          <p className="text-sm text-gray-500 mt-0.5">
+          <p className="text-sm text-v-muted mt-0.5">
             Descreva o tipo de template que precisa para aprovação na Meta
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">
+            <label className="block text-xs font-medium text-v-muted mb-1">
               Tipo de Template
             </label>
             <textarea
@@ -207,12 +207,12 @@ function TemplateGenerator() {
               placeholder="Ex: Template de boas-vindas para e-commerce, mensagem de cobrança amigável, convite para evento, follow-up de vendas..."
               rows={5}
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+              className="w-full px-3 py-2 border border-v-border rounded-lg text-sm text-v-text bg-v-bg placeholder:text-v-muted focus:outline-none focus:ring-2 focus:ring-v-accent resize-none"
             />
           </div>
 
           {error && (
-            <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+            <p className="text-sm text-red-400 bg-red-900/30 border border-red-900/50 rounded-lg px-3 py-2">
               {error}
             </p>
           )}
@@ -220,7 +220,7 @@ function TemplateGenerator() {
           <button
             type="submit"
             disabled={loading || !type.trim()}
-            className="inline-flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white font-medium px-5 py-2.5 rounded-lg text-sm transition-colors"
+            className="inline-flex items-center justify-center gap-2 bg-v-accent hover:bg-v-glow disabled:opacity-60 text-white font-medium px-5 py-2.5 rounded-lg text-sm transition-colors"
           >
             <Sparkles size={14} />
             {loading ? "Gerando..." : "Gerar Template"}
@@ -228,24 +228,24 @@ function TemplateGenerator() {
         </form>
       </div>
 
-      <div className="bg-white border border-gray-200 rounded-xl p-5 flex flex-col gap-4">
+      <div className="bg-v-card border border-v-card-border rounded-xl p-5 flex flex-col gap-4">
         <div>
-          <h2 className="text-base font-semibold text-gray-900">Template Gerado</h2>
-          <p className="text-sm text-gray-500 mt-0.5">
+          <h2 className="text-base font-semibold text-v-text">Template Gerado</h2>
+          <p className="text-sm text-v-muted mt-0.5">
             Template otimizado para aprovação na Meta
           </p>
         </div>
 
         {!result && !loading && (
-          <div className="flex-1 flex flex-col items-center justify-center py-10 text-gray-400 gap-2">
+          <div className="flex-1 flex flex-col items-center justify-center py-10 text-v-muted gap-2">
             <MessageSquare size={32} className="opacity-30" />
             <p className="text-sm">O template gerado aparecerá aqui</p>
           </div>
         )}
 
         {loading && (
-          <div className="flex-1 flex flex-col items-center justify-center py-10 text-gray-400 gap-2">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600" />
+          <div className="flex-1 flex flex-col items-center justify-center py-10 text-v-muted gap-2">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-v-accent" />
             <p className="text-sm">Gerando template...</p>
           </div>
         )}
@@ -253,27 +253,27 @@ function TemplateGenerator() {
         {result && (
           <div className="flex flex-col gap-4">
             <div className="relative">
-              <div className="font-mono text-sm bg-gray-50 border border-gray-200 rounded-lg p-4 whitespace-pre-wrap leading-relaxed text-gray-800">
+              <div className="font-mono text-sm bg-v-bg border border-v-border rounded-lg p-4 whitespace-pre-wrap leading-relaxed text-v-text/80">
                 {result.template}
               </div>
               <button
                 onClick={copyTemplate}
-                className="absolute top-2 right-2 p-1.5 rounded-md bg-white border border-gray-200 text-gray-400 hover:text-indigo-600 hover:border-indigo-300 transition-colors"
+                className="absolute top-2 right-2 p-1.5 rounded-md bg-v-card border border-v-border text-v-muted hover:text-v-accent hover:border-v-accent/40 transition-colors"
                 title="Copiar template"
               >
-                {copied ? <Check size={14} className="text-green-600" /> : <Copy size={14} />}
+                {copied ? <Check size={14} className="text-green-400" /> : <Copy size={14} />}
               </button>
             </div>
 
             {result.variables && result.variables.length > 0 && (
               <div>
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                <p className="text-xs font-semibold text-v-muted uppercase tracking-wide mb-2">
                   Variáveis
                 </p>
                 <ul className="flex flex-col gap-1">
                   {result.variables.map((v, i) => (
-                    <li key={i} className="text-sm text-gray-700 flex items-start gap-2">
-                      <span className="font-mono text-indigo-600 shrink-0">{`{{${i + 1}}}`}</span>
+                    <li key={i} className="text-sm text-v-text/80 flex items-start gap-2">
+                      <span className="font-mono text-v-accent shrink-0">{`{{${i + 1}}}`}</span>
                       {v}
                     </li>
                   ))}
@@ -283,13 +283,13 @@ function TemplateGenerator() {
 
             {result.tips && result.tips.length > 0 && (
               <div>
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                <p className="text-xs font-semibold text-v-muted uppercase tracking-wide mb-2">
                   Dicas para aprovação
                 </p>
                 <ul className="flex flex-col gap-1">
                   {result.tips.map((tip, i) => (
-                    <li key={i} className="text-sm text-gray-600 flex items-start gap-2">
-                      <span className="text-green-500 shrink-0 mt-0.5">✓</span>
+                    <li key={i} className="text-sm text-v-text/70 flex items-start gap-2">
+                      <span className="text-green-400 shrink-0 mt-0.5">✓</span>
                       {tip}
                     </li>
                   ))}
@@ -315,9 +315,9 @@ interface QualificationResult {
 
 function ScoreBadge({ score }: { score: number }) {
   const color =
-    score > 70 ? "bg-green-50 text-green-700 border-green-200"
-    : score >= 40 ? "bg-yellow-50 text-yellow-700 border-yellow-200"
-    : "bg-red-50 text-red-700 border-red-200";
+    score > 70 ? "bg-green-900/30 text-green-400 border-green-800"
+    : score >= 40 ? "bg-yellow-900/30 text-yellow-400 border-yellow-800"
+    : "bg-red-900/30 text-red-400 border-red-800";
   return (
     <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-bold border ${color}`}>
       <Star size={13} />
@@ -365,20 +365,20 @@ function QualifyTab() {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <div className="bg-white border border-gray-200 rounded-xl p-5 flex flex-col gap-4">
+      <div className="bg-v-card border border-v-card-border rounded-xl p-5 flex flex-col gap-4">
         <div>
-          <h2 className="text-base font-semibold text-gray-900 flex items-center gap-2">
-            <Star size={16} className="text-purple-600" />
+          <h2 className="text-base font-semibold text-v-text flex items-center gap-2">
+            <Star size={16} className="text-purple-400" />
             Qualificar Empresa
           </h2>
-          <p className="text-sm text-gray-500 mt-0.5">
+          <p className="text-sm text-v-muted mt-0.5">
             Receba um score de 0–100 com justificativa detalhada. Custa 10 créditos por CNPJ.
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">CNPJ</label>
+            <label className="block text-xs font-medium text-v-muted mb-1">CNPJ</label>
             <input
               type="text"
               value={cnpj}
@@ -386,12 +386,12 @@ function QualifyTab() {
               placeholder="00000000000000"
               maxLength={14}
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="w-full px-3 py-2 border border-v-border rounded-lg text-sm font-mono text-v-text bg-v-bg placeholder:text-v-muted focus:outline-none focus:ring-2 focus:ring-purple-500"
             />
           </div>
 
           {error && (
-            <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+            <p className="text-sm text-red-400 bg-red-900/30 border border-red-900/50 rounded-lg px-3 py-2">
               {error}
             </p>
           )}
@@ -399,7 +399,7 @@ function QualifyTab() {
           <button
             type="submit"
             disabled={loading || cnpj.length !== 14}
-            className="inline-flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-60 text-white font-medium px-5 py-2.5 rounded-lg text-sm transition-colors"
+            className="inline-flex items-center justify-center gap-2 bg-purple-700 hover:bg-purple-600 disabled:opacity-60 text-white font-medium px-5 py-2.5 rounded-lg text-sm transition-colors"
           >
             <Sparkles size={14} />
             {loading ? "Qualificando..." : "Qualificar (10 créditos)"}
@@ -407,24 +407,24 @@ function QualifyTab() {
         </form>
       </div>
 
-      <div className="bg-white border border-gray-200 rounded-xl p-5 flex flex-col gap-4">
+      <div className="bg-v-card border border-v-card-border rounded-xl p-5 flex flex-col gap-4">
         <div>
-          <h2 className="text-base font-semibold text-gray-900">Resultado da Qualificação</h2>
-          <p className="text-sm text-gray-500 mt-0.5">
+          <h2 className="text-base font-semibold text-v-text">Resultado da Qualificação</h2>
+          <p className="text-sm text-v-muted mt-0.5">
             Score e justificativa gerados por IA
           </p>
         </div>
 
         {!result && !loading && (
-          <div className="flex-1 flex flex-col items-center justify-center py-10 text-gray-400 gap-2">
+          <div className="flex-1 flex flex-col items-center justify-center py-10 text-v-muted gap-2">
             <Star size={32} className="opacity-30" />
             <p className="text-sm">O resultado aparecerá aqui após a qualificação</p>
           </div>
         )}
 
         {loading && (
-          <div className="flex-1 flex flex-col items-center justify-center py-10 text-gray-400 gap-2">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600" />
+          <div className="flex-1 flex flex-col items-center justify-center py-10 text-v-muted gap-2">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500" />
             <p className="text-sm">Consultando IA...</p>
           </div>
         )}
@@ -434,22 +434,22 @@ function QualifyTab() {
             <div className="flex items-center gap-3">
               <ScoreBadge score={result.score} />
               <div>
-                <p className="text-xs text-gray-500 font-mono">{result.cnpj}</p>
+                <p className="text-xs text-v-muted font-mono">{result.cnpj}</p>
                 {result.from_cache && (
-                  <p className="text-xs text-gray-400 mt-0.5">Resultado em cache · 0 créditos debitados</p>
+                  <p className="text-xs text-v-muted mt-0.5">Resultado em cache · 0 créditos debitados</p>
                 )}
                 {!result.from_cache && (
-                  <p className="text-xs text-gray-400 mt-0.5">{result.credits_used} crédito{result.credits_used !== 1 ? "s" : ""} debitado{result.credits_used !== 1 ? "s" : ""}</p>
+                  <p className="text-xs text-v-muted mt-0.5">{result.credits_used} crédito{result.credits_used !== 1 ? "s" : ""} debitado{result.credits_used !== 1 ? "s" : ""}</p>
                 )}
               </div>
             </div>
 
-            <div className="bg-gray-50 border border-gray-100 rounded-xl p-4">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Justificativa</p>
-              <p className="text-sm text-gray-700 leading-relaxed">{result.justification}</p>
+            <div className="bg-v-bg border border-v-border rounded-xl p-4">
+              <p className="text-xs font-semibold text-v-muted uppercase tracking-wide mb-2">Justificativa</p>
+              <p className="text-sm text-v-text/80 leading-relaxed">{result.justification}</p>
             </div>
 
-            <p className="text-xs text-gray-400">Modelo: {result.model}</p>
+            <p className="text-xs text-v-muted">Modelo: {result.model}</p>
           </div>
         )}
       </div>
@@ -463,20 +463,20 @@ export default function IntelligencePage() {
   return (
     <div className="max-w-5xl mx-auto flex flex-col gap-6">
       <div>
-        <h1 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-          <Brain size={20} className="text-indigo-600" />
+        <h1 className="text-xl font-semibold text-v-text flex items-center gap-2">
+          <Brain size={20} className="text-v-accent" />
           Inteligência Artificial
         </h1>
-        <p className="text-sm text-gray-500 mt-0.5">
+        <p className="text-sm text-v-muted mt-0.5">
           Assistentes inteligentes para CNAEs, templates de mensagem e qualificação de leads
         </p>
       </div>
 
-      <div className="flex gap-1 p-1 bg-gray-100 rounded-xl w-fit">
+      <div className="flex gap-1 p-1 bg-v-border rounded-xl w-fit">
         <button
           onClick={() => setTab("cnae")}
           className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-            tab === "cnae" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"
+            tab === "cnae" ? "bg-v-accent text-white" : "text-v-muted hover:text-v-text"
           }`}
         >
           <Search size={14} />
@@ -485,7 +485,7 @@ export default function IntelligencePage() {
         <button
           onClick={() => setTab("template")}
           className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-            tab === "template" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"
+            tab === "template" ? "bg-v-accent text-white" : "text-v-muted hover:text-v-text"
           }`}
         >
           <MessageSquare size={14} />
@@ -494,7 +494,7 @@ export default function IntelligencePage() {
         <button
           onClick={() => setTab("qualify")}
           className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-            tab === "qualify" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"
+            tab === "qualify" ? "bg-v-accent text-white" : "text-v-muted hover:text-v-text"
           }`}
         >
           <Star size={14} />

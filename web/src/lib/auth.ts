@@ -1,5 +1,3 @@
-"use server";
-
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { apiFetch } from "./api";
@@ -10,10 +8,13 @@ export interface TokenPair {
   expires_in: number;
 }
 
+export type UserRole = "super_admin" | "org_admin" | "seller";
+
 export interface AuthUser {
   user_id: string;
   org_id: string;
-  role: "admin" | "manager" | "operator";
+  role: UserRole;
+  impersonated_by?: string;
 }
 
 export async function login(email: string, password: string): Promise<void> {
@@ -67,7 +68,8 @@ export function decodeJWT(token: string): AuthUser | null {
     return {
       user_id: decoded.user_id,
       org_id: decoded.org_id,
-      role: decoded.role,
+      role: decoded.role as UserRole,
+      impersonated_by: decoded.impersonated_by,
     };
   } catch {
     return null;

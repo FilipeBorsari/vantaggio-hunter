@@ -17,6 +17,8 @@ interface CreatedOrg {
   name: string;
 }
 
+const inputClass = "w-full px-3 py-2 border border-v-border rounded-lg text-sm text-v-text bg-v-bg placeholder:text-v-muted focus:outline-none focus:ring-2 focus:ring-v-accent";
+
 export default function NewOrganizationPage() {
   const router = useRouter();
   const [plans, setPlans] = useState<Plan[]>([]);
@@ -98,42 +100,42 @@ export default function NewOrganizationPage() {
       <div className="flex items-center gap-2 mb-6">
         <Link
           href="/admin/organizations"
-          className="text-gray-500 hover:text-gray-700"
+          className="text-v-muted hover:text-v-text"
         >
           <ChevronLeft size={20} />
         </Link>
-        <h1 className="text-xl font-semibold text-gray-900">Nova Organização</h1>
+        <h1 className="text-xl font-semibold text-v-text">Nova Organização</h1>
       </div>
 
       {error && (
-        <p className="mb-4 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+        <p className="mb-4 text-sm text-red-400 bg-red-900/30 border border-red-900/50 rounded-lg px-3 py-2">
           {error}
         </p>
       )}
 
       {!createdOrg ? (
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <h2 className="font-medium text-gray-900 mb-4">Dados da organização</h2>
+        <div className="bg-v-card rounded-xl border border-v-card-border p-6">
+          <h2 className="font-medium text-v-text mb-4">Dados da organização</h2>
           <form onSubmit={handleCreateOrg} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-v-text/80 mb-1">
                 Nome
               </label>
               <input
                 name="name"
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className={inputClass}
                 placeholder="Ex: Empresa XYZ"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-v-text/80 mb-1">
                 Plano
               </label>
               <select
                 name="plan_id"
                 onFocus={loadPlans}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className={inputClass}
               >
                 <option value="">Sem plano</option>
                 {plans.map((p) => (
@@ -146,35 +148,35 @@ export default function NewOrganizationPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-medium py-2 px-4 rounded-lg text-sm transition-colors"
+              className="w-full bg-v-accent hover:bg-v-glow disabled:opacity-50 text-white font-medium py-2 px-4 rounded-lg text-sm transition-colors"
             >
               {loading ? "Criando..." : "Criar Organização"}
             </button>
           </form>
         </div>
       ) : (
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-            <p className="text-sm text-green-700 font-medium">
+        <div className="bg-v-card rounded-xl border border-v-card-border p-6">
+          <div className="mb-4 p-3 bg-green-900/30 border border-green-800 rounded-lg">
+            <p className="text-sm text-green-400 font-medium">
               Organização &quot;{createdOrg.name}&quot; criada com sucesso!
             </p>
           </div>
-          <h2 className="font-medium text-gray-900 mb-4">Criar primeiro usuário</h2>
+          <h2 className="font-medium text-v-text mb-4">Criar primeiro usuário</h2>
           <form onSubmit={handleCreateUser} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-v-text/80 mb-1">
                 E-mail
               </label>
               <input
                 name="email"
                 type="email"
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className={inputClass}
                 placeholder="usuario@empresa.com"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-v-text/80 mb-1">
                 Senha
               </label>
               <input
@@ -182,18 +184,18 @@ export default function NewOrganizationPage() {
                 type="password"
                 required
                 minLength={8}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className={inputClass}
                 placeholder="Mínimo 8 caracteres"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-v-text/80 mb-1">
                 Role
               </label>
               <select
                 name="role"
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className={inputClass}
               >
                 <option value="manager">Manager</option>
                 <option value="operator">Operator</option>
@@ -203,14 +205,14 @@ export default function NewOrganizationPage() {
               <button
                 type="button"
                 onClick={() => router.push("/admin/organizations")}
-                className="flex-1 border border-gray-300 text-gray-700 font-medium py-2 px-4 rounded-lg text-sm hover:bg-gray-50 transition-colors"
+                className="flex-1 border border-v-border text-v-text font-medium py-2 px-4 rounded-lg text-sm hover:bg-v-border/40 transition-colors"
               >
                 Pular
               </button>
               <button
                 type="submit"
                 disabled={loading}
-                className="flex-1 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-medium py-2 px-4 rounded-lg text-sm transition-colors"
+                className="flex-1 bg-v-accent hover:bg-v-glow disabled:opacity-50 text-white font-medium py-2 px-4 rounded-lg text-sm transition-colors"
               >
                 {loading ? "Criando..." : "Criar Usuário"}
               </button>

@@ -1,6 +1,20 @@
 @import "tailwindcss";
 
-body {
-  background: #ffffff;
-  color: #171717;
+@theme {
+  --color-v-bg:          #080706;
+  --color-v-card:        #0c0b0a;
+  --color-v-card-border: #121212;
+  --color-v-border:      #1F1F1F;
+  --color-v-accent:      #E8621A;
+  --color-v-accent-2:    #F07D35;
+  --color-v-glow:        #DC5A14;
+  --color-v-glow-mid:    #B43C0A;
+  --color-v-glow-dark:   #8C2805;
+  --color-v-text:        #FFFFFF;
+  --color-v-muted:       #737373;
+}
+
+html, body {
+  background-color: #080706;
+  color: #FFFFFF;
 }

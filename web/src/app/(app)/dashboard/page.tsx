@@ -108,10 +108,10 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 const STATUS_COLOR: Record<string, string> = {
-  done: "text-green-600 bg-green-50",
-  processing: "text-blue-600 bg-blue-50",
-  queued: "text-yellow-600 bg-yellow-50",
-  failed: "text-red-600 bg-red-50",
+  done: "text-green-400 bg-green-900/30",
+  processing: "text-blue-400 bg-blue-900/30",
+  queued: "text-yellow-400 bg-yellow-900/30",
+  failed: "text-red-400 bg-red-900/30",
 };
 
 // ─── KPI Card ────────────────────────────────────────────────────────────────
@@ -125,13 +125,13 @@ interface KPICardProps {
 
 function KPICard({ label, value, icon: Icon, color }: KPICardProps) {
   return (
-    <div className="bg-white border border-gray-200 rounded-xl p-5 flex items-center gap-4">
+    <div className="bg-v-card border border-v-card-border rounded-xl p-5 flex items-center gap-4">
       <div className={`p-3 rounded-xl ${color}`}>
         <Icon size={22} />
       </div>
       <div>
-        <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">{label}</p>
-        <p className="text-2xl font-bold tabular-nums text-gray-900">{value}</p>
+        <p className="text-xs text-v-muted uppercase tracking-wide font-medium">{label}</p>
+        <p className="text-2xl font-bold tabular-nums text-v-text">{value}</p>
       </div>
     </div>
   );
@@ -152,17 +152,17 @@ function FunnelBars({ stages }: { stages: FunnelStage[] }) {
         return (
           <div key={stage.name} className="flex flex-col gap-1">
             <div className="flex items-center justify-between text-sm">
-              <span className="font-medium text-gray-700">{stage.name}</span>
-              <span className="text-gray-500 tabular-nums">
+              <span className="font-medium text-v-text/80">{stage.name}</span>
+              <span className="text-v-muted tabular-nums">
                 {fmt(stage.count)}
                 {conversion != null && (
-                  <span className="ml-2 text-xs text-indigo-600">({conversion}%)</span>
+                  <span className="ml-2 text-xs text-v-accent">({conversion}%)</span>
                 )}
               </span>
             </div>
-            <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
+            <div className="h-3 bg-v-border rounded-full overflow-hidden">
               <div
-                className="h-full bg-indigo-500 rounded-full transition-all duration-500"
+                className="h-full bg-v-accent rounded-full transition-all duration-500"
                 style={{ width: `${pct}%` }}
               />
             </div>
@@ -221,20 +221,20 @@ export default function DashboardPage() {
       {/* Header + period selector */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-xl font-semibold text-gray-900">Dashboard</h1>
-          <p className="text-sm text-gray-500 mt-0.5">
+          <h1 className="text-xl font-semibold text-v-text">Dashboard</h1>
+          <p className="text-sm text-v-muted mt-0.5">
             KPIs e funil de conversão da sua organização.
           </p>
         </div>
-        <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
+        <div className="flex gap-1 bg-v-border rounded-xl p-1">
           {PERIODS.map((p) => (
             <button
               key={p.value}
               onClick={() => setPeriod(p.value)}
               className={`px-4 py-1.5 text-sm font-medium rounded-lg transition-colors ${
                 period === p.value
-                  ? "bg-white text-gray-900 shadow-sm"
-                  : "text-gray-500 hover:text-gray-900"
+                  ? "bg-v-accent text-white"
+                  : "text-v-muted hover:text-v-text"
               }`}
             >
               {p.label}
@@ -249,51 +249,54 @@ export default function DashboardPage() {
           label="Créditos consumidos"
           value={loading ? "—" : fmt(kpis?.credits_consumed ?? 0)}
           icon={Zap}
-          color="bg-amber-50 text-amber-600"
+          color="bg-amber-900/30 text-amber-400"
         />
         <KPICard
           label="Leads extraídos"
           value={loading ? "—" : fmt(kpis?.leads_extracted ?? 0)}
           icon={Users}
-          color="bg-indigo-50 text-indigo-600"
+          color="bg-v-accent/10 text-v-accent"
         />
         <KPICard
           label="Leads qualificados"
           value={loading ? "—" : fmt(kpis?.leads_qualified ?? 0)}
           icon={Activity}
-          color="bg-green-50 text-green-600"
+          color="bg-green-900/30 text-green-400"
         />
         <KPICard
           label="Taxa de conversão"
           value={loading ? "—" : fmtPct(kpis?.conversion_rate ?? 0)}
           icon={TrendingUp}
-          color="bg-rose-50 text-rose-600"
+          color="bg-rose-900/30 text-rose-400"
         />
       </div>
 
       {/* Daily chart + Funnel */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Daily consumption chart */}
-        <div className="lg:col-span-2 bg-white border border-gray-200 rounded-xl p-5">
-          <h2 className="text-sm font-semibold text-gray-700 mb-4">
+        <div className="lg:col-span-2 bg-v-card border border-v-card-border rounded-xl p-5">
+          <h2 className="text-sm font-semibold text-v-text/80 mb-4">
             Consumo diário
           </h2>
           {loading || daily.length === 0 ? (
-            <div className="h-52 flex items-center justify-center text-sm text-gray-400">
+            <div className="h-52 flex items-center justify-center text-sm text-v-muted">
               {loading ? "Carregando..." : "Sem dados no período"}
             </div>
           ) : (
             <ResponsiveContainer width="100%" height={200}>
               <LineChart data={daily} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#1F1F1F" />
                 <XAxis
                   dataKey="date"
                   tickFormatter={fmtChartDate}
-                  tick={{ fontSize: 11 }}
+                  tick={{ fontSize: 11, fill: "#737373" }}
                   interval="preserveStartEnd"
                 />
-                <YAxis tick={{ fontSize: 11 }} />
+                <YAxis tick={{ fontSize: 11, fill: "#737373" }} />
                 <Tooltip
+                  contentStyle={{ backgroundColor: "#0c0b0a", border: "1px solid #1F1F1F", borderRadius: 8 }}
+                  labelStyle={{ color: "#737373" }}
+                  itemStyle={{ color: "#FFFFFF" }}
                   formatter={(v, name) => [
                     fmt(Number(v ?? 0)),
                     name === "credits" ? "Créditos" : "Leads",
@@ -302,12 +305,12 @@ export default function DashboardPage() {
                 />
                 <Legend
                   formatter={(v) => (v === "credits" ? "Créditos" : "Leads")}
-                  wrapperStyle={{ fontSize: 12 }}
+                  wrapperStyle={{ fontSize: 12, color: "#737373" }}
                 />
                 <Line
                   type="monotone"
                   dataKey="credits"
-                  stroke="#6366f1"
+                  stroke="#E8621A"
                   strokeWidth={2}
                   dot={false}
                 />
@@ -324,12 +327,12 @@ export default function DashboardPage() {
         </div>
 
         {/* Funnel */}
-        <div className="bg-white border border-gray-200 rounded-xl p-5">
-          <h2 className="text-sm font-semibold text-gray-700 mb-4">
+        <div className="bg-v-card border border-v-card-border rounded-xl p-5">
+          <h2 className="text-sm font-semibold text-v-text/80 mb-4">
             Funil de conversão
           </h2>
           {loading || !funnel ? (
-            <div className="h-40 flex items-center justify-center text-sm text-gray-400">
+            <div className="h-40 flex items-center justify-center text-sm text-v-muted">
               {loading ? "Carregando..." : "Sem dados"}
             </div>
           ) : (
@@ -341,21 +344,21 @@ export default function DashboardPage() {
       {/* Top CNAEs + Recent searches */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Top CNAEs */}
-        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-          <div className="px-5 py-4 border-b border-gray-100">
-            <h2 className="text-sm font-semibold text-gray-700">Top CNAEs buscados</h2>
+        <div className="bg-v-card border border-v-card-border rounded-xl overflow-hidden">
+          <div className="px-5 py-4 border-b border-v-border">
+            <h2 className="text-sm font-semibold text-v-text/80">Top CNAEs buscados</h2>
           </div>
           {loading ? (
-            <div className="flex items-center justify-center h-32 text-sm text-gray-400">
+            <div className="flex items-center justify-center h-32 text-sm text-v-muted">
               Carregando...
             </div>
           ) : topCnaes.length === 0 ? (
-            <div className="flex items-center justify-center h-32 text-sm text-gray-400">
+            <div className="flex items-center justify-center h-32 text-sm text-v-muted">
               Sem dados no período
             </div>
           ) : (
-            <div className="divide-y divide-gray-50">
-              <div className="grid grid-cols-[80px_1fr_64px] gap-2 px-5 py-2 text-xs font-medium text-gray-500 bg-gray-50">
+            <div className="divide-y divide-v-card-border">
+              <div className="grid grid-cols-[80px_1fr_64px] gap-2 px-5 py-2 text-xs font-medium text-v-muted bg-v-bg/50">
                 <span>CNAE</span>
                 <span>Descrição</span>
                 <span className="text-right">Leads</span>
@@ -365,14 +368,14 @@ export default function DashboardPage() {
                   key={c.cnae_code}
                   className="grid grid-cols-[80px_1fr_64px] gap-2 px-5 py-2.5 text-sm items-center"
                 >
-                  <span className="font-mono text-xs text-gray-500">{c.cnae_code}</span>
+                  <span className="font-mono text-xs text-v-muted">{c.cnae_code}</span>
                   <span
-                    className="text-gray-700 truncate text-xs"
+                    className="text-v-text/70 truncate text-xs"
                     title={c.description}
                   >
                     {c.description}
                   </span>
-                  <span className="text-right font-semibold tabular-nums text-indigo-600">
+                  <span className="text-right font-semibold tabular-nums text-v-accent">
                     {fmt(c.leads)}
                   </span>
                 </div>
@@ -382,26 +385,26 @@ export default function DashboardPage() {
         </div>
 
         {/* Recent searches */}
-        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-          <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-gray-700">Buscas recentes</h2>
+        <div className="bg-v-card border border-v-card-border rounded-xl overflow-hidden">
+          <div className="px-5 py-4 border-b border-v-border flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-v-text/80">Buscas recentes</h2>
             <Link
               href="/search/history"
-              className="text-xs text-indigo-600 hover:underline"
+              className="text-xs text-v-accent hover:underline"
             >
               Ver todas
             </Link>
           </div>
           {loading ? (
-            <div className="flex items-center justify-center h-32 text-sm text-gray-400">
+            <div className="flex items-center justify-center h-32 text-sm text-v-muted">
               Carregando...
             </div>
           ) : recentSearches.length === 0 ? (
-            <div className="flex items-center justify-center h-32 text-sm text-gray-400">
+            <div className="flex items-center justify-center h-32 text-sm text-v-muted">
               Nenhuma busca ainda
             </div>
           ) : (
-            <div className="divide-y divide-gray-50">
+            <div className="divide-y divide-v-card-border">
               {recentSearches.map((s) => {
                 const label =
                   s.query_text
@@ -411,21 +414,21 @@ export default function DashboardPage() {
                   <Link
                     key={s.id}
                     href={`/search/${s.id}`}
-                    className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50 transition-colors"
+                    className="flex items-center gap-3 px-5 py-3 hover:bg-v-border/30 transition-colors"
                   >
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm text-gray-800 truncate">{label}</p>
-                      <p className="text-xs text-gray-400 mt-0.5">{fmtDate(s.created_at)}</p>
+                      <p className="text-sm text-v-text/80 truncate">{label}</p>
+                      <p className="text-xs text-v-muted mt-0.5">{fmtDate(s.created_at)}</p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       {s.result_count != null && (
-                        <span className="text-xs text-gray-500 tabular-nums">
+                        <span className="text-xs text-v-muted tabular-nums">
                           {fmt(s.result_count)} leads
                         </span>
                       )}
                       <span
                         className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                          STATUS_COLOR[s.status] ?? "text-gray-600 bg-gray-100"
+                          STATUS_COLOR[s.status] ?? "text-v-muted bg-v-border"
                         }`}
                       >
                         {STATUS_LABEL[s.status] ?? s.status}

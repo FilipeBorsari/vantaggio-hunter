@@ -20,6 +20,46 @@ interface FormState {
   account_id: string;
 }
 
+const inputClass = "w-full px-3 py-2 border border-v-border rounded-lg text-sm text-v-text bg-v-bg placeholder:text-v-muted focus:outline-none focus:ring-2 focus:ring-v-accent";
+
+function Field({
+  label,
+  id,
+  type = "text",
+  value,
+  onChange,
+  placeholder,
+  required,
+  hint,
+}: {
+  label: string;
+  id: string;
+  type?: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  required?: boolean;
+  hint?: string;
+}) {
+  return (
+    <div>
+      <label htmlFor={id} className="block text-sm font-medium text-v-text/80 mb-1">
+        {label} {required && <span className="text-red-400">*</span>}
+      </label>
+      <input
+        id={id}
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        required={required}
+        className={inputClass}
+      />
+      {hint && <p className="mt-1 text-xs text-v-muted">{hint}</p>}
+    </div>
+  );
+}
+
 export default function CRMSettingsPage() {
   const [integration, setIntegration] = useState<CRMIntegration | null>(null);
   const [notFound, setNotFound] = useState(false);
@@ -91,67 +131,29 @@ export default function CRMSettingsPage() {
     }
   }
 
-  function Field({
-    label,
-    id,
-    type = "text",
-    value,
-    onChange,
-    placeholder,
-    required,
-    hint,
-  }: {
-    label: string;
-    id: keyof FormState;
-    type?: string;
-    value: string;
-    onChange: (v: string) => void;
-    placeholder?: string;
-    required?: boolean;
-    hint?: string;
-  }) {
-    return (
-      <div>
-        <label htmlFor={id} className="block text-sm font-medium text-gray-700 mb-1">
-          {label} {required && <span className="text-red-500">*</span>}
-        </label>
-        <input
-          id={id}
-          type={type}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={placeholder}
-          required={required}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-        />
-        {hint && <p className="mt-1 text-xs text-gray-500">{hint}</p>}
-      </div>
-    );
-  }
-
   return (
     <div className="max-w-xl flex flex-col gap-6">
       <div>
-        <h1 className="text-xl font-semibold text-gray-900">Integração CRM</h1>
-        <p className="text-sm text-gray-500 mt-0.5">
+        <h1 className="text-xl font-semibold text-v-text">Integração CRM</h1>
+        <p className="text-sm text-v-muted mt-0.5">
           Configure o Chatwoot para receber os leads exportados do Vantaggio Hunter.
         </p>
       </div>
 
       {integration && (
-        <div className="flex items-center gap-2 px-4 py-3 bg-green-50 border border-green-200 rounded-xl text-sm text-green-700">
+        <div className="flex items-center gap-2 px-4 py-3 bg-green-900/30 border border-green-800 rounded-xl text-sm text-green-400">
           <CheckCircle size={16} />
           Integração ativa — {integration.base_url}
         </div>
       )}
       {notFound && !integration && (
-        <div className="flex items-center gap-2 px-4 py-3 bg-yellow-50 border border-yellow-200 rounded-xl text-sm text-yellow-700">
+        <div className="flex items-center gap-2 px-4 py-3 bg-yellow-900/30 border border-yellow-800 rounded-xl text-sm text-yellow-400">
           <XCircle size={16} />
           Nenhuma integração configurada ainda
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="bg-white border border-gray-200 rounded-xl p-6 flex flex-col gap-4">
+      <form onSubmit={handleSubmit} className="bg-v-card border border-v-card-border rounded-xl p-6 flex flex-col gap-4">
         <Field
           label="URL base do Chatwoot"
           id="base_url"
@@ -188,10 +190,10 @@ export default function CRMSettingsPage() {
         />
 
         {error && (
-          <p className="text-sm text-red-600">{error}</p>
+          <p className="text-sm text-red-400">{error}</p>
         )}
         {saved && (
-          <p className="text-sm text-green-600 flex items-center gap-1">
+          <p className="text-sm text-green-400 flex items-center gap-1">
             <CheckCircle size={14} /> Integração salva com sucesso
           </p>
         )}
@@ -199,7 +201,7 @@ export default function CRMSettingsPage() {
         <button
           type="submit"
           disabled={saving}
-          className="self-start px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+          className="self-start px-4 py-2 bg-v-accent text-white text-sm font-medium rounded-lg hover:bg-v-glow disabled:opacity-50"
         >
           {saving ? "Salvando..." : integration ? "Atualizar integração" : "Salvar integração"}
         </button>

@@ -27,11 +27,11 @@ interface ExportListResponse {
 }
 
 const STATUS_CONFIG: Record<ExportJob["status"], { label: string; className: string }> = {
-  pending:    { label: "Aguardando",   className: "bg-yellow-50 text-yellow-700" },
-  processing: { label: "Processando",  className: "bg-blue-50 text-blue-700" },
-  done:       { label: "Concluído",    className: "bg-green-50 text-green-700" },
-  partial:    { label: "Parcial",      className: "bg-orange-50 text-orange-700" },
-  failed:     { label: "Falhou",       className: "bg-red-50 text-red-700" },
+  pending:    { label: "Aguardando",   className: "bg-yellow-900/30 text-yellow-400" },
+  processing: { label: "Processando",  className: "bg-blue-900/30 text-blue-400" },
+  done:       { label: "Concluído",    className: "bg-green-900/30 text-green-400" },
+  partial:    { label: "Parcial",      className: "bg-v-accent/10 text-v-accent" },
+  failed:     { label: "Falhou",       className: "bg-red-900/30 text-red-400" },
 };
 
 function formatDate(iso: string) {
@@ -62,32 +62,32 @@ function ExportRow({ job }: { job: ExportJob }) {
   return (
     <>
       <tr
-        className={`border-b border-gray-100 text-sm hover:bg-gray-50 ${hasErrors ? "cursor-pointer" : ""}`}
+        className={`border-b border-v-card-border text-sm hover:bg-v-border/30 ${hasErrors ? "cursor-pointer" : ""}`}
         onClick={() => hasErrors && setExpanded((v) => !v)}
       >
-        <td className="px-4 py-3 text-gray-500 tabular-nums text-xs">
+        <td className="px-4 py-3 text-v-muted tabular-nums text-xs">
           {formatDate(job.created_at)}
         </td>
-        <td className="px-4 py-3 font-mono text-xs text-gray-500">{job.crm_type}</td>
-        <td className="px-4 py-3 tabular-nums text-gray-700">{job.total_count}</td>
-        <td className="px-4 py-3 tabular-nums text-green-700">{job.success_count}</td>
-        <td className="px-4 py-3 tabular-nums text-red-600">{job.fail_count}</td>
+        <td className="px-4 py-3 font-mono text-xs text-v-muted">{job.crm_type}</td>
+        <td className="px-4 py-3 tabular-nums text-v-text/80">{job.total_count}</td>
+        <td className="px-4 py-3 tabular-nums text-green-400">{job.success_count}</td>
+        <td className="px-4 py-3 tabular-nums text-red-400">{job.fail_count}</td>
         <td className="px-4 py-3"><StatusBadge status={job.status} /></td>
-        <td className="px-4 py-3 text-gray-400">
+        <td className="px-4 py-3 text-v-muted">
           {hasErrors ? (
             expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />
           ) : null}
         </td>
       </tr>
       {expanded && hasErrors && (
-        <tr className="bg-red-50">
+        <tr className="bg-red-900/20">
           <td colSpan={7} className="px-6 py-3">
-            <p className="text-xs font-medium text-red-700 mb-2">Erros detalhados</p>
+            <p className="text-xs font-medium text-red-400 mb-2">Erros detalhados</p>
             <div className="space-y-1">
               {job.error_log.map((e, i) => (
-                <div key={i} className="flex gap-3 text-xs text-red-600">
+                <div key={i} className="flex gap-3 text-xs text-red-400/80">
                   <span className="font-mono">{formatCNPJ(e.cnpj)}</span>
-                  <span className="text-red-400">tentativa {e.attempt}</span>
+                  <span className="text-red-400/60">tentativa {e.attempt}</span>
                   <span>{e.error}</span>
                 </div>
               ))}
@@ -137,26 +137,26 @@ export default function ExportsPage() {
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-gray-900">Exportações CRM</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Histórico de envios para o Chatwoot</p>
+          <h1 className="text-xl font-semibold text-v-text">Exportações CRM</h1>
+          <p className="text-sm text-v-muted mt-0.5">Histórico de envios para o Chatwoot</p>
         </div>
         <a
           href="/settings/crm"
-          className="text-sm text-indigo-600 hover:text-indigo-800 font-medium"
+          className="text-sm text-v-accent hover:text-v-accent-2 font-medium"
         >
           Configurar integração →
         </a>
       </div>
 
-      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+      <div className="bg-v-card border border-v-card-border rounded-xl overflow-hidden">
         {jobs.length === 0 && data !== null ? (
-          <div className="flex items-center justify-center h-40 text-sm text-gray-400">
+          <div className="flex items-center justify-center h-40 text-sm text-v-muted">
             Nenhuma exportação ainda
           </div>
         ) : (
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-gray-50 border-b border-gray-100 text-xs font-medium text-gray-600">
+              <tr className="bg-v-bg border-b border-v-border text-xs font-medium text-v-muted">
                 <th className="px-4 py-3 text-left">Data</th>
                 <th className="px-4 py-3 text-left">CRM</th>
                 <th className="px-4 py-3 text-left">Total</th>
@@ -175,21 +175,21 @@ export default function ExportsPage() {
 
       {totalPages > 1 && (
         <div className="flex items-center justify-between text-sm">
-          <span className="text-gray-500">
+          <span className="text-v-muted">
             Página {page} de {totalPages}
           </span>
           <div className="flex gap-2">
             <button
               disabled={page === 1}
               onClick={() => setPage((p) => p - 1)}
-              className="px-3 py-1 border border-gray-300 rounded-lg disabled:opacity-40 hover:bg-gray-50"
+              className="px-3 py-1 border border-v-border text-v-muted rounded-lg disabled:opacity-40 hover:bg-v-border/40 hover:text-v-text"
             >
               Anterior
             </button>
             <button
               disabled={page === totalPages}
               onClick={() => setPage((p) => p + 1)}
-              className="px-3 py-1 border border-gray-300 rounded-lg disabled:opacity-40 hover:bg-gray-50"
+              className="px-3 py-1 border border-v-border text-v-muted rounded-lg disabled:opacity-40 hover:bg-v-border/40 hover:text-v-text"
             >
               Próxima
             </button>
