@@ -59,3 +59,14 @@ func RequireRole(roles ...string) func(http.Handler) http.Handler {
 		})
 	}
 }
+
+// RequireSuperAdmin allows only super_admin.
+func RequireSuperAdmin() func(http.Handler) http.Handler {
+	return RequireRole("super_admin")
+}
+
+// RequireOrgAdmin allows only org_admin. It does NOT enforce org_id matching —
+// handlers must compare chi.URLParam("orgId") against ContextKeyOrgID themselves.
+func RequireOrgAdmin() func(http.Handler) http.Handler {
+	return RequireRole("org_admin")
+}

@@ -21,9 +21,10 @@ var (
 )
 
 type Claims struct {
-	UserID string `json:"user_id"`
-	OrgID  string `json:"org_id"`
-	Role   string `json:"role"`
+	UserID         string `json:"user_id"`
+	OrgID          string `json:"org_id"`
+	Role           string `json:"role"`
+	ImpersonatedBy string `json:"impersonated_by,omitempty"`
 	jwt.RegisteredClaims
 }
 
@@ -126,13 +127,15 @@ func HashPassword(password string) (string, error) {
 	return string(b), err
 }
 
-func generateSecureToken() (string, error) {
+func GenerateSecureToken() (string, error) {
 	b := make([]byte, 32)
 	if _, err := rand.Read(b); err != nil {
 		return "", err
 	}
 	return hex.EncodeToString(b), nil
 }
+
+func generateSecureToken() (string, error) { return GenerateSecureToken() }
 
 func sha256hex(s string) string {
 	h := sha256.Sum256([]byte(s))
