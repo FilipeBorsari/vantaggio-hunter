@@ -104,9 +104,10 @@ func (r *postgresRepo) List(ctx context.Context, orgID string, cnpj *string) ([]
 
 func (r *postgresRepo) GetCompanyPromptData(ctx context.Context, cnpj string) (*CompanyPromptData, error) {
 	data := &CompanyPromptData{}
+	var dataInicio *time.Time
 	err := r.db.QueryRow(ctx, `
 		SELECT c.cnpj, c.razao_social, c.municipio_nome, c.uf,
-		       c.capital_social, c.situacao_cadastral, c.data_inicio_atividade,
+		       c.capital_social, c.situacao_cadastral, c.data_inicio,
 		       c.porte, c.opcao_simples,
 		       (SELECT cc.cnae_code FROM tb_company_cnaes cc
 		        WHERE cc.cnpj=c.cnpj AND cc.is_primary=true LIMIT 1)
@@ -115,7 +116,7 @@ func (r *postgresRepo) GetCompanyPromptData(ctx context.Context, cnpj string) (*
 		cnpj,
 	).Scan(
 		&data.CNPJ, &data.RazaoSocial, &data.Municipio, &data.UF,
-		&data.CapitalSocial, &data.SituacaoCadastral, &data.DataInicio,
+		&data.CapitalSocial, &data.SituacaoCadastral, &dataInicio,
 		&data.Porte, &data.OpcaoSimples, &data.PrimaryCNAE,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -123,6 +124,10 @@ func (r *postgresRepo) GetCompanyPromptData(ctx context.Context, cnpj string) (*
 	}
 	if err != nil {
 		return nil, fmt.Errorf("get company prompt data: %w", err)
+	}
+	if dataInicio != nil {
+		s := dataInicio.Format("2006-01-02")
+		data.DataInicio = &s
 	}
 	return data, nil
 }

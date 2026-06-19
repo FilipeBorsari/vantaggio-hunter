@@ -383,8 +383,7 @@ function QualifyTab() {
               type="text"
               value={cnpj}
               onChange={(e) => setCnpj(sanitizeCNPJ(e.target.value))}
-              placeholder="00000000000000"
-              maxLength={14}
+              placeholder="00.000.000/0000-00 ou 00000000000000"
               required
               className="w-full px-3 py-2 border border-v-border rounded-lg text-sm font-mono text-v-text bg-v-bg placeholder:text-v-muted focus:outline-none focus:ring-2 focus:ring-purple-500"
             />
