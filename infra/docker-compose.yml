@@ -5,6 +5,7 @@ services:
     image: pgvector/pgvector:pg16
     ports:
       - "5433:5432"
+    shm_size: '256m'
     environment:
       POSTGRES_DB: vantaggio
       POSTGRES_USER: vantaggio
